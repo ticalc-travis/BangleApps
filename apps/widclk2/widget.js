@@ -23,7 +23,7 @@ WIDGETS.widclk={
       18
     );
     var time = require("locale").time(new Date(), 1);
-    g.drawString(time, this.x+1, this.y+4, true);
+    g.drawString(time, this.x+1, this.y+3, true);
     // queue draw for the next minute
     if (this.drawTimeout) clearTimeout(this.drawTimeout);
     this.drawTimeout = setTimeout(()=>{
