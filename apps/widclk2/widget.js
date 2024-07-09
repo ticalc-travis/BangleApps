@@ -7,7 +7,7 @@ WIDGETS.widclk={
   width:Bangle.CLOCK?0:42,
 
   draw:function() {
-    expected_width = Bangle.CLOCK?0:42;
+    let expected_width = Bangle.CLOCK?0:42;
     if (this.width != expected_width) {
       // redraw on widget resize
       this.width = expected_width;
