@@ -74,6 +74,24 @@ in locales:
 */
 
 var locales = {
+  "en_USijel": {
+    lang: "en_US",
+    decimal_point: ".",
+    thousands_sep: ",",
+    currency_symbol: "$", currency_first: true,
+    int_curr_symbol: "USD",
+    speed: "mph",
+    distance: { 0: "ft", 1: "mi" },
+    temperature: "°F",
+    ampm: { 0: "AM", 1: "PM" },
+    timePattern: { 0: "%HH:%MM:%SS ", 1: "%HH:%MM" },
+    datePattern: { 0: "%b %d, %Y", 1: "%Y-%m-%d" },
+    abmonth: "Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec",
+    month: "January,February,March,April,May,June,July,August,September,October,November,December",
+    abday: "Sun,Mon,Tue,Wed,Thu,Fri,Sat",
+    day: "Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday",
+    // No translation for english...
+  },
   "en_GB": { // this is default
     lang: "en_GB",
     decimal_point: ".",
