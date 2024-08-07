@@ -162,15 +162,8 @@ class TimerView {
 
   render(item) {
     if (!item) {
-      const origin_as_tri = as_triangle(
-        this.triangle_timer.timer.origin,
-        this.triangle_timer.increment
-      );
-      this.layout.row3.label = origin_as_tri[0] + '/' + origin_as_tri[1];
       this.layout.update();
       this.layout.clear();
-      this.layout.render(this.layout.row3);
-      this.layout.render(this.layout.buttons);
     }
 
     if (!item || item == 'timer') {
@@ -202,6 +195,20 @@ class TimerView {
       this.layout.render(this.layout.buttons);
     }
 
+    if (!item || item == 'status') {
+      const origin_as_tri = as_triangle(
+        this.triangle_timer.timer.origin,
+        this.triangle_timer.increment
+      );
+      this.layout.row3.label =
+        (this.triangle_timer.timer.is_running() ? '>' : '')
+          + origin_as_tri[0]
+          + '/'
+          + origin_as_tri[1];
+      this.layout.clear(this.layout.row3);
+      this.layout.render(this.layout.row3);
+    }
+
     if (this.triangle_timer.timer.is_running()) {
       this.timer_timeout = setTimeout(
         this.render.bind(this),
@@ -218,6 +225,7 @@ class TimerView {
       this.triangle_timer.timer.start();
     }
     this.render('buttons');
+    this.render('status');
   }
 }
 
