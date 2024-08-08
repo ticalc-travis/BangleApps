@@ -151,7 +151,7 @@ class TimerView {
               {type: 'btn', font: '6x8:2', fillx: 1, label: 'St/Pa', id: 'start_btn',
                cb: this.start_stop_timer.bind(this)},
               {type: 'btn', font: '6x8:2', fillx: 1, label: 'Menu', id: 'menu_btn',
-               cb: null},
+               cb: this.start_menu.bind(this)},
             ]
           }
         ]
@@ -227,6 +227,60 @@ class TimerView {
     this.render('buttons');
     this.render('status');
   }
+
+  start_menu() {
+    menu_UI = new TimerViewMenu(
+      () => { switch_UI(this); },
+      this.triangle_timer
+    );
+    switch_UI(menu_UI);
+  }
+}
+
+
+class TimerViewMenu {
+  constructor(back_cb, triangle_timer) {
+    this.triangle_timer = triangle_timer;
+    this.back_cb = back_cb;
+
+    this.do_reset = false;
+  }
+
+  start() {
+    this.top_menu();
+  }
+
+  stop() {
+    if (this.do_reset) {
+      this.triangle_timer.timer.reset();
+    }
+    this.back_cb();
+  }
+
+  reset_timer() {
+    this.nested_timer.timer.reset();
+  }
+
+  top_menu() {
+    const reset_title = this.do_reset ? 'Undo reset' : 'Reset';
+
+    menu = {
+      '': {
+        title: this.triangle_timer.name,
+        back: this.stop.bind(this)
+      }
+    }
+    menu[reset_title] = ()=>{ this.do_reset = !this.do_reset; };
+
+    E.showMenu(menu);
+  }
+}
+
+
+function switch_UI(newUI) {
+  currentUI.stop();
+  currentUI = newUI;
+  currentUI.start();
 }
 
 
