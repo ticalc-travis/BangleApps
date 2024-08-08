@@ -4,7 +4,7 @@ const Layout = require('Layout');
 class PrimitiveTimer {
   constructor(origin, rate, is_running) {
     this.origin = origin;
-    this._rate = rate;
+    this.rate = rate;
 
     this._start_time = Date.now();
     this._pause_time = is_running ? null : this._start_time;
@@ -36,13 +36,13 @@ class PrimitiveTimer {
     const elapsed =
           (now - this._start_time)
           - (this.is_running() ? 0 : (now - this._pause_time));
-    return this.origin + (this._rate * elapsed);
+    return this.origin + (this.rate * elapsed);
   }
 
   set(new_value) {
     const now = Date.now();
-    this._start_time = (now - new_value / this._rate)
-      + (this.origin / this._rate);
+    this._start_time = (now - new_value / this.rate)
+      + (this.origin / this.rate);
     if (!this.is_running()) {
       this._pause_time = now;
     }
@@ -53,7 +53,7 @@ class PrimitiveTimer {
       cls: 'PrimitiveTimer',
       version: 0,
       origin: this.origin,
-      rate: this._rate,
+      rate: this.rate,
       start_time: this._start_time,
       pause_time: this._pause_time
     };
@@ -114,8 +114,9 @@ class TimerView {
   }
 
   stop () {
-    if (this.timer_timeout) {
+    if (this.timer_timeout !== null) {
       clearTimeout(this.timer_timeout);
+      this.timer_timeout = null;
     }
     Bangle.setUI();
   }
@@ -209,11 +210,14 @@ class TimerView {
       this.layout.render(this.layout.row3);
     }
 
-    if (this.triangle_timer.timer.is_running()) {
+    if (this.timer_timeout === null && this.triangle_timer.timer.is_running()) {
       this.timer_timeout = setTimeout(
-        this.render.bind(this),
-        1 - this.triangle_timer.timer.get() % 1,
-        'timer'
+        () => { this.timer_timeout = null; this.render('timer'); },
+        (1 - this.triangle_timer.timer.get() % 1)
+          / this.triangle_timer.timer.rate + 50,
+        // Calculate approximate time next display update is needed.
+        // The + 50 is a compensating factor due to timeouts
+        // apparently sometimes triggering too early.
       );
     }
   }
