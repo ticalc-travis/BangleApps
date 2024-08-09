@@ -237,8 +237,6 @@ class TimerView {
 class TimerViewMenu {
   constructor(triangle_timer) {
     this.triangle_timer = triangle_timer;
-
-    this.do_reset = false;
   }
 
   start() {
@@ -246,28 +244,35 @@ class TimerViewMenu {
   }
 
   stop() {
-    if (this.do_reset) {
-      this.triangle_timer.timer.reset();
-    }
     this.emit('back');
   }
 
   reset_timer() {
-    this.nested_timer.timer.reset();
+    this.triangle_timer.timer.reset();
   }
 
   top_menu() {
-    const reset_title = this.do_reset ? 'Undo reset' : 'Reset';
-
-    menu = {
+    top_menu = {
       '': {
         title: this.triangle_timer.name,
         back: this.stop.bind(this)
-      }
+      },
+      'Reset': () => { E.showMenu(reset_menu); }
     };
-    menu[reset_title] = ()=>{ this.do_reset = !this.do_reset; };
 
-    E.showMenu(menu);
+    reset_menu = {
+      '': {
+        title: 'Confirm reset',
+        back: () => { E.showMenu(top_menu); }
+      },
+      'Reset': () => {
+        this.triangle_timer.timer.reset();
+        this.stop();
+      },
+      'Cancel': () => { E.showMenu(top_menu); },
+    }
+
+    E.showMenu(top_menu);
   }
 }
 
@@ -282,7 +287,7 @@ function switch_UI(newUI) {
 Bangle.loadWidgets();
 Bangle.drawWidgets();
 
-// TODO: Specific class object for nested timers?
+// TODO: Specific class object for triangle timers?
 triangle_timer = {
   name: 'Test',
   timer: new PrimitiveTimer(0, 0.001, true),
