@@ -71,6 +71,16 @@ class PrimitiveTimer {
 }
 
 
+class TriangleTimer {
+  constructor(name, primitive_timer, increment) {
+    this.name = name;
+    this.timer = primitive_timer;
+    if (increment === undefined) increment = 1;
+    this.increment = increment;
+  }
+}
+
+
 function fixed_ceil(value) {
   // JavaScript sucks balls
   return Math.ceil(Math.round(value * 1e10) / 1e10);
@@ -214,7 +224,7 @@ class TimerView {
       this.timer_timeout = setTimeout(
         () => { this.timer_timeout = null; this.render('timer'); },
         (1 - this.triangle_timer.timer.get() % 1)
-          / this.triangle_timer.timer.rate + 50,
+          / this.triangle_timer.timer.rate + 50
         // Calculate approximate time next display update is needed.
         // The + 50 is a compensating factor due to timeouts
         // apparently sometimes triggering too early.
@@ -270,7 +280,7 @@ class TimerViewMenu {
         this.stop();
       },
       'Cancel': () => { E.showMenu(top_menu); },
-    }
+    };
 
     E.showMenu(top_menu);
   }
@@ -287,12 +297,11 @@ function switch_UI(newUI) {
 Bangle.loadWidgets();
 Bangle.drawWidgets();
 
-// TODO: Specific class object for triangle timers?
-triangle_timer = {
-  name: 'Test',
-  timer: new PrimitiveTimer(0, 0.001, true),
-  increment: 1,
-};
+triangle_timer = new TriangleTimer(
+  'Test',
+  new PrimitiveTimer(0, 0.001, true),
+  1
+);
 
 const timer_view = new TimerView(triangle_timer);
 const timer_menu = new TimerViewMenu(triangle_timer);
