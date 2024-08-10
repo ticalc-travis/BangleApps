@@ -123,7 +123,7 @@ class TimerView {
     this.render();
   }
 
-  stop () {
+  stop() {
     if (this.timer_timeout !== null) {
       clearTimeout(this.timer_timeout);
       this.timer_timeout = null;
@@ -172,6 +172,9 @@ class TimerView {
   }
 
   render(item) {
+    const timer = this.triangle_timer.timer;
+    console.debug('render called: ' + item);
+
     if (!item) {
       this.layout.update();
       this.layout.clear();
@@ -179,10 +182,15 @@ class TimerView {
 
     if (!item || item == 'timer') {
 
+      let timer_as_linear = timer.get();
+      if (timer_as_linear < 0) {
+        // Handle countdown timer expiration
+        timer_as_linear = 0;
+        setTimeout(() => { this.render('status'); }, 0);
+        setTimeout(() => { this.render('buttons'); }, 0);
+      }
       const timer_as_tri = as_triangle(
-        this.triangle_timer.timer.get(),
-        this.triangle_timer.increment
-      );
+        timer_as_linear, this.triangle_timer.increment);
 
       let label = timer_as_tri[0];
       if (label != this.layout.row1.label) {
@@ -202,32 +210,42 @@ class TimerView {
 
     if (!item || item == 'buttons') {
       this.layout.start_btn.label =
-        this.triangle_timer.timer.is_running() ? 'Pause' : 'Start';
+        timer.is_running() ? 'Pause' : 'Start';
       this.layout.render(this.layout.buttons);
     }
 
     if (!item || item == 'status') {
       const origin_as_tri = as_triangle(
-        this.triangle_timer.timer.origin,
+        timer.origin,
         this.triangle_timer.increment
       );
+      // Indicate timer expired if its current value is <= 0 and it's
+      // a countdown timer
+      const timer_expired = triangle_timer.timer.get() <= 0
+            && triangle_timer.timer.rate < 0;
       this.layout.row3.label =
-        (this.triangle_timer.timer.is_running() ? '>' : '')
-          + origin_as_tri[0]
-          + '/'
-          + origin_as_tri[1];
+        (timer_expired ? '!' : '')
+        + (timer.is_running() ? '>' : '')
+        + origin_as_tri[0]
+        + '/'
+        + origin_as_tri[1];
       this.layout.clear(this.layout.row3);
       this.layout.render(this.layout.row3);
     }
 
-    if (this.timer_timeout === null && this.triangle_timer.timer.is_running()) {
+    if (this.timer_timeout === null && timer.is_running()) {
+      // Calculate approximate time next display update is needed.
+      // The + 50 is a compensating factor due to timeouts
+      // apparently sometimes triggering too early.
+      let next_tick = timer.get() % 1;
+      if (timer.rate > 0) {
+        next_tick = 1 - next_tick;
+      }
+      next_tick = next_tick / Math.abs(timer.rate) + 50;
+
       this.timer_timeout = setTimeout(
         () => { this.timer_timeout = null; this.render('timer'); },
-        (1 - this.triangle_timer.timer.get() % 1)
-          / this.triangle_timer.timer.rate + 50
-        // Calculate approximate time next display update is needed.
-        // The + 50 is a compensating factor due to timeouts
-        // apparently sometimes triggering too early.
+        next_tick
       );
     }
   }
@@ -299,7 +317,7 @@ Bangle.drawWidgets();
 
 triangle_timer = new TriangleTimer(
   'Test',
-  new PrimitiveTimer(0, 0.001, true),
+  new PrimitiveTimer(60, -0.001, true),
   1
 );
 
