@@ -233,7 +233,9 @@ class TimerView {
       this.layout.render(this.layout.row3);
     }
 
-    if (this.timer_timeout === null && timer.is_running()) {
+    if (this.timer_timeout === null
+        && timer.is_running()
+        && timer.get() > 0) {
       // Calculate approximate time next display update is needed.
       // The + 50 is a compensating factor due to timeouts
       // apparently sometimes triggering too early.
