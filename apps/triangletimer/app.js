@@ -63,10 +63,10 @@ class PrimitiveTimer {
     if (!(data.cls == 'PrimitiveTimer' && data.version == 0)) {
       console.error('Incompatible data type for loading PrimitiveTimer state');
     }
-    loaded_timer = new this(data.origin, data.rate, false);
-    loaded_timer._start_time = data.start_time;
-    loaded_timer._pause_time = data.pause_time;
-    return loaded_timer;
+    loaded = new this(data.origin, data.rate, false);
+    loaded._start_time = data.start_time;
+    loaded._pause_time = data.pause_time;
+    return loaded;
   }
 }
 
@@ -77,6 +77,23 @@ class TriangleTimer {
     this.timer = primitive_timer;
     if (increment === undefined) increment = 1;
     this.increment = increment;
+  }
+
+  dump() {
+    return {
+      cls: 'TriangleTimer',
+      version: 0,
+      name: this.name,
+      timer: this.timer.dump(),
+      increment: this.increment
+    };
+  }
+
+  static load(data) {
+    if (!(data.cls == 'TriangleTimer' && data.version == 0)) {
+      console.error('Incompatible data type for loading TriangleTimer state');
+    }
+    return new this(data.name, PrimitiveTimer.load(data.timer), data.increment);
   }
 }
 
