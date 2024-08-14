@@ -79,6 +79,31 @@ class TriangleTimer {
     this.increment = increment;
   }
 
+  display_name() {
+    if (this.name) {
+      return this.name;
+    } else {
+      // TODO: provisional name based on timer params
+      return 'Timer';
+    }
+  }
+
+  display_status() {
+    let status = '';
+
+    // Indicate timer expired if its current value is <= 0 and it's
+    // a countdown timer
+    if (this.timer.get() <= 0 && this.timer.rate < 0) {
+      status += '!';
+    }
+
+    if (this.timer.is_running()) {
+      status += '>';
+    }
+
+    return status;
+  }
+
   dump() {
     return {
       cls: 'TriangleTimer',
@@ -126,8 +151,8 @@ function as_linear(triangle_time, increment) {
 
 
 class TimerView {
-  constructor(triangle_timer) {
-    this.triangle_timer = triangle_timer;
+  constructor(tri_timer) {
+    this.tri_timer = tri_timer;
 
     this.layout = null;
     this.listeners = {};
@@ -179,7 +204,7 @@ class TimerView {
               {type: 'btn', font: '6x8:2', fillx: 1, label: 'St/Pa', id: 'start_btn',
                cb: this.start_stop_timer.bind(this)},
               {type: 'btn', font: '6x8:2', fillx: 1, label: 'Menu', id: 'menu_btn',
-               cb: () => { this.emit('timer_menu'); }},
+               cb: () => { this.emit('timer_view_menu'); }},
             ]
           }
         ]
@@ -189,7 +214,7 @@ class TimerView {
   }
 
   render(item) {
-    const timer = this.triangle_timer.timer;
+    const timer = this.tri_timer.timer;
     console.debug('render called: ' + item);
 
     if (!item) {
@@ -207,7 +232,7 @@ class TimerView {
         setTimeout(() => { this.render('buttons'); }, 0);
       }
       const timer_as_tri = as_triangle(
-        timer_as_linear, this.triangle_timer.increment);
+        timer_as_linear, this.tri_timer.increment);
 
       let label = timer_as_tri[0];
       if (label != this.layout.row1.label) {
@@ -234,15 +259,10 @@ class TimerView {
     if (!item || item == 'status') {
       const origin_as_tri = as_triangle(
         timer.origin,
-        this.triangle_timer.increment
+        this.tri_timer.increment
       );
-      // Indicate timer expired if its current value is <= 0 and it's
-      // a countdown timer
-      const timer_expired = triangle_timer.timer.get() <= 0
-            && triangle_timer.timer.rate < 0;
       this.layout.row3.label =
-        (timer_expired ? '!' : '')
-        + (timer.is_running() ? '>' : '')
+        this.tri_timer.display_status()
         + origin_as_tri[0]
         + '/'
         + origin_as_tri[1];
@@ -270,10 +290,10 @@ class TimerView {
   }
 
   start_stop_timer() {
-    if (this.triangle_timer.timer.is_running()) {
-      this.triangle_timer.timer.pause();
+    if (this.tri_timer.timer.is_running()) {
+      this.tri_timer.timer.pause();
     } else {
-      this.triangle_timer.timer.start();
+      this.tri_timer.timer.start();
     }
     this.render('buttons');
     this.render('status');
@@ -282,8 +302,8 @@ class TimerView {
 
 
 class TimerViewMenu {
-  constructor(triangle_timer) {
-    this.triangle_timer = triangle_timer;
+  constructor(tri_timer) {
+    this.tri_timer = tri_timer;
   }
 
   start() {
@@ -291,20 +311,25 @@ class TimerViewMenu {
   }
 
   stop() {
+    E.showMenu();
+  }
+
+  back() {
     this.emit('back');
   }
 
   reset_timer() {
-    this.triangle_timer.timer.reset();
+    this.tri_timer.timer.reset();
   }
 
   top_menu() {
     top_menu = {
       '': {
-        title: this.triangle_timer.name,
-        back: this.stop.bind(this)
+        title: this.tri_timer.display_name(),
+        back: this.back.bind(this)
       },
-      'Reset': () => { E.showMenu(reset_menu); }
+      'Reset': () => { E.showMenu(reset_menu); },
+      'Timers': () => { this.emit('timer_menu'); }
     };
 
     reset_menu = {
@@ -313,8 +338,8 @@ class TimerViewMenu {
         back: () => { E.showMenu(top_menu); }
       },
       'Reset': () => {
-        this.triangle_timer.timer.reset();
-        this.stop();
+        this.tri_timer.timer.reset();
+        this.back();
       },
       'Cancel': () => { E.showMenu(top_menu); },
     };
@@ -324,26 +349,97 @@ class TimerViewMenu {
 }
 
 
-function switch_UI(newUI) {
-  currentUI.stop();
-  currentUI = newUI;
-  currentUI.start();
+class TimerMenu {
+  constructor(tri_timers) {
+    this.tri_timers = tri_timers;
+  }
+
+  start() {
+    this.top_menu();
+  }
+
+  stop() {
+    E.showMenu();
+  }
+
+  back() {
+    this.emit('back');
+  }
+
+  top_menu() {
+    let menu = {
+      '': {
+        title: "Timers",
+        back: this.back.bind(this)
+      }
+    };
+    this.tri_timers.forEach((tri_timer) => {
+      menu[tri_timer.display_name()] = () => { this.emit('view_timer', tri_timer); };
+    });
+    E.showMenu(menu);
+  }
+}
+
+
+function switch_UI(new_UI) {
+  if (current_UI) {
+    current_UI.stop();
+  }
+  current_UI = new_UI;
+  current_UI.start();
+}
+
+
+function set_timer_view(tri_timer) {
+  const timer_view = new TimerView(tri_timer);
+  switch_UI(timer_view);
+  timer_view.on(
+    'timer_view_menu', () => { set_timer_view_menu(tri_timer); }
+  );
+}
+
+function set_timer_view_menu(tri_timer) {
+  const timer_view_menu = new TimerViewMenu(tri_timer);
+  switch_UI(timer_view_menu);
+  timer_view_menu.on(
+    'back', () => { set_timer_view(tri_timer); }
+  );
+  timer_view_menu.on(
+    'timer_menu', () => { set_timer_menu(tri_timer); }
+  );
+}
+
+function set_timer_menu(tri_timer) {
+  const timer_menu = new TimerMenu(tri_timers);
+  switch_UI(timer_menu);
+  timer_menu.on(
+    'back', () => { set_timer_view_menu(tri_timer); }
+  );
+  timer_menu.on(
+    'view_timer', (timer) => { set_timer_view(timer); }
+  );
 }
 
 
 Bangle.loadWidgets();
 Bangle.drawWidgets();
 
-triangle_timer = new TriangleTimer(
-  'Test',
-  new PrimitiveTimer(60, -0.001, true),
+let tri_timer = new TriangleTimer(
+  'Down',
+  new PrimitiveTimer(10, -0.001, true),
   1
 );
+tri_timers = [tri_timer];
+tri_timer = new TriangleTimer(
+  'Up',
+  new PrimitiveTimer(0, 0.001, true),
+  1
+);
+tri_timers.push(tri_timer);
+tri_timer = tri_timers[0];
 
-const timer_view = new TimerView(triangle_timer);
-const timer_menu = new TimerViewMenu(triangle_timer);
-timer_view.on('timer_menu', () => { switch_UI(timer_menu); });
-timer_menu.on('back', () => { switch_UI(timer_view); });
+current_UI = null;
+set_timer_view(tri_timer);
 
-currentUI = timer_view;
-currentUI.start();
+const timer_view = new TimerView(tri_timer);
+const timer_view_menu = new TimerViewMenu(tri_timer);
