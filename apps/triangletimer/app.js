@@ -83,9 +83,21 @@ class TriangleTimer {
     if (this.name) {
       return this.name;
     } else {
-      // TODO: provisional name based on timer params
-      return 'Timer';
+      return this.provisional_name();
     }
+  }
+
+  provisional_name() {
+    const origin_as_tri = as_triangle(
+      this.timer.origin,
+      this.increment
+    );
+    return this.display_status()
+      + ' '
+      + (this.timer.rate >= 0 ? 'U' : 'D')
+      + ' '
+      + origin_as_tri[0] + '/' + origin_as_tri[1]
+      + ' x' + this.increment;
   }
 
   display_status() {
@@ -183,19 +195,22 @@ class TimerView {
             type: 'txt',
             id: 'row1',
             label: '88:88:88',
-            font: 'Vector:35x55',
+            font: 'Vector:35x56',
+            fillx: 1,
           },
           {
             type: 'txt',
             id: 'row2',
             label: '88:88:88',
-            font: 'Vector:35x40',
+            font: 'Vector:35x42',
+            fillx: 1,
           },
           {
             type: 'txt',
             id: 'row3',
             label: '88:88:88',
-            font: 'Vector:25',
+            font: '12x20',
+            fillx: 1,
           },
           {
             type: 'h',
@@ -262,10 +277,7 @@ class TimerView {
         this.tri_timer.increment
       );
       this.layout.row3.label =
-        this.tri_timer.display_status()
-        + origin_as_tri[0]
-        + '/'
-        + origin_as_tri[1];
+        this.tri_timer.provisional_name();
       this.layout.clear(this.layout.row3);
       this.layout.render(this.layout.row3);
     }
