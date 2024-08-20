@@ -363,9 +363,6 @@ class TimerViewMenu {
   }
 
   edit_menu() {
-    let origin_tri = as_triangle(
-      this.tri_timer.timer.origin, this.tri_timer.increment);
-
     edit_menu = {
       '': {
         title: 'Edit: ' + this.tri_timer.display_name(),
@@ -376,8 +373,8 @@ class TimerViewMenu {
         format: v => (v >= 0 ? 'Up' : 'Down'),
         onchange: v => { v = (v >= 0 ? -0.001 : 0.001); },
       },
-      'Start (Tri)': () => { E.showMenu(edit_start_tri_menu); },
-      'Start (HMS)': () => { E.showMenu(edit_start_hms_menu); },
+      'Start (Tri)': this.edit_start_tri_menu.bind(this),
+      'Start (HMS)': this.edit_start_hms_menu.bind(this),
       'Increment': {
         value: this.tri_timer.increment,
         min: 1,
@@ -385,15 +382,22 @@ class TimerViewMenu {
         step: 1,
         onchange: v => {
           this.tri_timer.increment = v;
-          edit_start_tri_menu.Outer.step = v;
+          //edit_start_tri_menu.Outer.step = v;
         },
       }
     };
 
+    E.showMenu(edit_menu);
+  }
+
+  edit_start_tri_menu() {
+    let origin_tri = as_triangle(
+      this.tri_timer.timer.origin, this.tri_timer.increment);
+
     edit_start_tri_menu = {
       '': {
         title: 'Start (Tri)',
-        back: () => { E.showMenu(edit_menu); },
+        back: this.edit_menu.bind(this),
       },
       'Outer': {
         value: origin_tri[0],
@@ -425,11 +429,15 @@ class TimerViewMenu {
       },
     };
 
+    E.showMenu(edit_start_tri_menu);
+  }
+
+  edit_start_hms_menu() {
     edit_start_hms_menu = {
       
     };
 
-    E.showMenu(edit_menu);
+    E.showMenu(edit_start_hms_menu);
   }
 }
 
@@ -511,13 +519,13 @@ function set_timer_menu(tri_timer) {
 Bangle.loadWidgets();
 Bangle.drawWidgets();
 
-tri_timer = new TriangleTimer(
+let tri_timer = new TriangleTimer(
   'Up',
   new PrimitiveTimer(210, 0.001, false),
   10
 );
 tri_timers = [tri_timer];
-let tri_timer = new TriangleTimer(
+tri_timer = new TriangleTimer(
   'Down',
   new PrimitiveTimer(55, -0.001, false),
   1
