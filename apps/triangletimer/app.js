@@ -341,6 +341,9 @@ class TimerViewMenu {
         back: this.back.bind(this)
       },
       'Reset': () => { E.showMenu(reset_menu); },
+      'Edit': this.edit_menu.bind(this),
+      // TODO: Add
+      // TODO: Delete
       'Timers': () => { this.emit('timer_menu'); }
     };
 
@@ -357,6 +360,76 @@ class TimerViewMenu {
     };
 
     E.showMenu(top_menu);
+  }
+
+  edit_menu() {
+    let origin_tri = as_triangle(
+      this.tri_timer.timer.origin, this.tri_timer.increment);
+
+    edit_menu = {
+      '': {
+        title: 'Edit: ' + this.tri_timer.display_name(),
+        back: () => { this.top_menu(); },
+      },
+      'Direction': {
+        value: this.tri_timer.timer.rate,
+        format: v => (v >= 0 ? 'Up' : 'Down'),
+        onchange: v => { v = (v >= 0 ? -0.001 : 0.001); },
+      },
+      'Start (Tri)': () => { E.showMenu(edit_start_tri_menu); },
+      'Start (HMS)': () => { E.showMenu(edit_start_hms_menu); },
+      'Increment': {
+        value: this.tri_timer.increment,
+        min: 1,
+        max: 9999,
+        step: 1,
+        onchange: v => {
+          this.tri_timer.increment = v;
+          edit_start_tri_menu.Outer.step = v;
+        },
+      }
+    };
+
+    edit_start_tri_menu = {
+      '': {
+        title: 'Start (Tri)',
+        back: () => { E.showMenu(edit_menu); },
+      },
+      'Outer': {
+        value: origin_tri[0],
+        min: 1,
+        max: 9999,
+        step: this.tri_timer.increment,
+        onchange: v => {
+          origin_tri[0] = v;
+          edit_start_tri_menu.Inner.max = origin_tri[0];
+          origin_tri[1] = (this.tri_timer.timer.rate >= 0) ?
+            1 : origin_tri[0];
+          edit_start_tri_menu.Inner.value = origin_tri[1];
+          this.tri_timer.timer.origin = as_linear(
+            origin_tri, this.tri_timer.increment
+          );
+        }
+      },
+      'Inner': {
+        value: origin_tri[1],
+        min: 1,
+        max: origin_tri[0],
+        step: 1,
+        onchange: v => {
+          origin_tri[1] = v;
+          this.tri_timer.timer.origin = as_linear(
+            origin_tri, this.tri_timer.increment
+          );
+        }
+      },
+    };
+
+    edit_start_hms_menu = {
+      
+    };
+
+    E.showMenu(edit_menu);
   }
 }
 
@@ -386,7 +459,9 @@ class TimerMenu {
       }
     };
     this.tri_timers.forEach((tri_timer) => {
-      menu[tri_timer.display_name()] = () => { this.emit('view_timer', tri_timer); };
+      menu[tri_timer.display_name()] = () => {
+        this.emit('view_timer', tri_timer);
+      };
     });
     E.showMenu(menu);
   }
@@ -436,15 +511,15 @@ function set_timer_menu(tri_timer) {
 Bangle.loadWidgets();
 Bangle.drawWidgets();
 
-let tri_timer = new TriangleTimer(
-  'Down',
-  new PrimitiveTimer(10, -0.001, true),
-  1
-);
-tri_timers = [tri_timer];
 tri_timer = new TriangleTimer(
   'Up',
-  new PrimitiveTimer(0, 0.001, true),
+  new PrimitiveTimer(210, 0.001, false),
+  10
+);
+tri_timers = [tri_timer];
+let tri_timer = new TriangleTimer(
+  'Down',
+  new PrimitiveTimer(55, -0.001, false),
   1
 );
 tri_timers.push(tri_timer);
