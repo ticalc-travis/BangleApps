@@ -380,6 +380,7 @@ class TimerViewMenu {
         min: 1,
         max: 9999,
         step: 1,
+        wrap: true,
         onchange: v => {
           this.tri_timer.increment = v;
         },
@@ -403,6 +404,7 @@ class TimerViewMenu {
         min: 1,
         max: 9999,
         step: this.tri_timer.increment,
+        wrap: true,
         onchange: v => {
           origin_tri[0] = v;
           edit_start_tri_menu.Inner.max = origin_tri[0];
@@ -419,6 +421,8 @@ class TimerViewMenu {
         min: 1,
         max: origin_tri[0],
         step: 1,
+        wrap: true,
+        noList: true,
         onchange: v => {
           origin_tri[1] = v;
           this.tri_timer.timer.origin = as_linear(
@@ -454,6 +458,7 @@ class TimerViewMenu {
         value: origin_hms.h,
         min: 0,
         max: 9999,
+        wrap: true,
         onchange: v => {
           origin_hms.h = v;
           update_origin();
@@ -463,6 +468,7 @@ class TimerViewMenu {
         value: origin_hms.m,
         min: 0,
         max: 59,
+        wrap: true,
         onchange: v => {
           origin_hms.m = v;
           update_origin();
@@ -472,6 +478,7 @@ class TimerViewMenu {
         value: origin_hms.s,
         min: 0,
         max: 59,
+        wrap: true,
         onchange: v => {
           origin_hms.s = v;
           update_origin();
