@@ -382,7 +382,6 @@ class TimerViewMenu {
         step: 1,
         onchange: v => {
           this.tri_timer.increment = v;
-          //edit_start_tri_menu.Outer.step = v;
         },
       }
     };
@@ -433,8 +432,51 @@ class TimerViewMenu {
   }
 
   edit_start_hms_menu() {
+    const timer = this.tri_timer.timer
+    let origin_hms = {
+      h: Math.floor(timer.origin / 3600),
+      m: Math.floor(timer.origin / 60) % 60,
+      s: Math.floor(timer.origin % 60),
+    };
+
+    function update_origin() {
+      timer.origin = origin_hms.h * 3600
+        + origin_hms.m * 60
+        + origin_hms.s;
+    }
+
     edit_start_hms_menu = {
-      
+      '': {
+        title: 'Start (HMS)',
+        back: this.edit_menu.bind(this),
+      },
+      'Hours': {
+        value: origin_hms.h,
+        min: 0,
+        max: 9999,
+        onchange: v => {
+          origin_hms.h = v;
+          update_origin();
+        }
+      },
+      'Minutes': {
+        value: origin_hms.m,
+        min: 0,
+        max: 59,
+        onchange: v => {
+          origin_hms.m = v;
+          update_origin();
+        }
+      },
+      'Seconds': {
+        value: origin_hms.s,
+        min: 0,
+        max: 59,
+        onchange: v => {
+          origin_hms.s = v;
+          update_origin();
+        }
+      },
     };
 
     E.showMenu(edit_start_hms_menu);
