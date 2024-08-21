@@ -369,9 +369,11 @@ class TimerViewMenu {
         back: () => { this.top_menu(); },
       },
       'Direction': {
-        value: this.tri_timer.timer.rate,
-        format: v => (v >= 0 ? 'Up' : 'Down'),
-        onchange: v => { v = (v >= 0 ? -0.001 : 0.001); },
+        value: this.tri_timer.timer.rate >= 0,
+        format: v => (v ? 'Up' : 'Down'),
+        onchange: v => {
+          this.tri_timer.timer.rate = -this.tri_timer.timer.rate;
+        }
       },
       'Start (Tri)': this.edit_start_tri_menu.bind(this),
       'Start (HMS)': this.edit_start_hms_menu.bind(this),
