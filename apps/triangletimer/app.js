@@ -343,9 +343,13 @@ class TimerViewMenu {
       'Reset': () => { E.showMenu(reset_menu); },
       'Edit': this.edit_menu.bind(this),
       // TODO: Add
-      // TODO: Delete
+      'Delete': () => { E.showMenu(delete_menu); },
       'Timers': () => { this.emit('timer_menu'); }
     };
+    if (tri_timers.length <= 1) {
+      // Prevent user deleting last timer
+      delete top_menu.Delete;
+    }
 
     reset_menu = {
       '': {
@@ -355,6 +359,18 @@ class TimerViewMenu {
       'Reset': () => {
         this.tri_timer.timer.reset();
         this.back();
+      },
+      'Cancel': () => { E.showMenu(top_menu); },
+    };
+
+    delete_menu = {
+      '': {
+        title: 'Confirm delete',
+        back: () => { E.showMenu(top_menu); }
+      },
+      'Delete': () => {
+        this.emit('view_timer',
+                  delete_tri_timer(this.tri_timer));
       },
       'Cancel': () => { E.showMenu(top_menu); },
     };
@@ -555,6 +571,9 @@ function set_timer_view_menu(tri_timer) {
   timer_view_menu.on(
     'timer_menu', () => { set_timer_menu(tri_timer); }
   );
+  timer_view_menu.on(
+    'view_timer', (timer) => { set_timer_view(timer); }
+  );
 }
 
 function set_timer_menu(tri_timer) {
@@ -566,6 +585,19 @@ function set_timer_menu(tri_timer) {
   timer_menu.on(
     'view_timer', (timer) => { set_timer_view(timer); }
   );
+}
+
+
+function delete_tri_timer(tri_timer) {
+  const idx = tri_timers.indexOf(tri_timer);
+  if (idx !== -1) {
+    tri_timers.splice(idx, 1);
+  } else {
+    console.warn('delete_tri_timer: Tried to delete a timer not in list')
+  }
+  // Return another timer to switch UI to after deleting the focused
+  // one
+  return tri_timers[Math.min(idx, tri_timers.length - 1)];
 }
 
 
