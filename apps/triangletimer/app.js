@@ -403,10 +403,12 @@ class TimerViewMenu {
       },
       'Outer': {
         value: origin_tri[0],
-        min: 1,
-        max: 9999,
+        min: this.tri_timer.increment,
+        max: Math.floor(9999 / this.tri_timer.increment)
+          * this.tri_timer.increment,
         step: this.tri_timer.increment,
         wrap: true,
+        noList: true,
         onchange: v => {
           origin_tri[0] = v;
           edit_start_tri_menu.Inner.max = origin_tri[0];
