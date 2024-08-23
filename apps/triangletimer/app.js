@@ -342,7 +342,10 @@ class TimerViewMenu {
       },
       'Reset': () => { E.showMenu(reset_menu); },
       'Edit': this.edit_menu.bind(this),
-      // TODO: Add
+      'Add': () => {
+        this.tri_timer = add_tri_timer(this.tri_timer);
+        this.edit_menu();
+      },
       'Delete': () => { E.showMenu(delete_menu); },
       'Timers': () => { this.emit('timer_menu'); }
     };
@@ -598,6 +601,14 @@ function delete_tri_timer(tri_timer) {
   // Return another timer to switch UI to after deleting the focused
   // one
   return tri_timers[Math.min(idx, tri_timers.length - 1)];
+}
+
+function add_tri_timer(tri_timer) {
+  // Create a copy of current timer object
+  const new_timer = TriangleTimer.load(tri_timer.dump());
+  new_timer.name = 'New';       // temp
+  tri_timers.push(new_timer);
+  return new_timer;
 }
 
 
