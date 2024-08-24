@@ -219,7 +219,10 @@ class TimerView {
               {type: 'btn', font: '6x8:2', fillx: 1, label: 'St/Pa', id: 'start_btn',
                cb: this.start_stop_timer.bind(this)},
               {type: 'btn', font: '6x8:2', fillx: 1, label: 'Menu', id: 'menu_btn',
-               cb: () => { set_timer_view_menu(this.tri_timer); }},
+               cb: () => {
+                 switch_UI(new TimerViewMenu(this.tri_timer));
+               }
+              }
             ]
           }
         ]
@@ -327,7 +330,7 @@ class TimerViewMenu {
   }
 
   back() {
-    set_timer_view(this.tri_timer);
+    switch_UI(new TimerView(this.tri_timer));
   }
 
   reset_timer() {
@@ -347,7 +350,7 @@ class TimerViewMenu {
         this.edit_menu();
       },
       'Delete': () => { E.showMenu(delete_menu); },
-      'Timers': () => { set_timer_menu(this.tri_timer); }
+      'Timers': () => { switch_UI(new TimerMenu(ui_tri_timers)); }
     };
     if (ui_tri_timers.length <= 1) {
       // Prevent user deleting last timer
@@ -372,7 +375,7 @@ class TimerViewMenu {
         back: () => { E.showMenu(top_menu); }
       },
       'Delete': () => {
-        set_timer_view(delete_tri_timer(this.tri_timer));
+        switch_UI(new TimerView(delete_tri_timer(this.tri_timer)));
       },
       'Cancel': () => { E.showMenu(top_menu); },
     };
@@ -527,7 +530,7 @@ class TimerMenu {
   }
 
   back() {
-    set_timer_view_menu(this.tri_timer);
+    switch_UI(new TimerViewMenu(this.tri_timer));
   }
 
   top_menu() {
@@ -539,7 +542,7 @@ class TimerMenu {
     };
     this.tri_timers.forEach((tri_timer) => {
       menu[tri_timer.display_name()] = () => {
-        set_timer_view(tri_timer);
+        switch_UI(new TimerView(tri_timer));
       };
     });
     E.showMenu(menu);
@@ -553,22 +556,6 @@ function switch_UI(new_UI) {
   }
   current_UI = new_UI;
   current_UI.start();
-}
-
-
-function set_timer_view(tri_timer) {
-  const timer_view = new TimerView(tri_timer);
-  switch_UI(timer_view);
-}
-
-function set_timer_view_menu(tri_timer) {
-  const timer_view_menu = new TimerViewMenu(tri_timer);
-  switch_UI(timer_view_menu);
-}
-
-function set_timer_menu(tri_timer) {
-  const timer_menu = new TimerMenu(ui_tri_timers);
-  switch_UI(timer_menu);
 }
 
 
@@ -612,4 +599,4 @@ ui_tri_timers.push(focused_tri_timer);
 focused_tri_timer = ui_tri_timers[0];
 
 current_UI = null;
-set_timer_view(focused_tri_timer);
+switch_UI(new TimerView(focused_tri_timer));
