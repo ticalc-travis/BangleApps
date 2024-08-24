@@ -349,7 +349,7 @@ class TimerViewMenu {
       'Delete': () => { E.showMenu(delete_menu); },
       'Timers': () => { this.emit('timer_menu'); }
     };
-    if (tri_timers.length <= 1) {
+    if (ui_tri_timers.length <= 1) {
       // Prevent user deleting last timer
       delete top_menu.Delete;
     }
@@ -580,7 +580,7 @@ function set_timer_view_menu(tri_timer) {
 }
 
 function set_timer_menu(tri_timer) {
-  const timer_menu = new TimerMenu(tri_timers);
+  const timer_menu = new TimerMenu(ui_tri_timers);
   switch_UI(timer_menu);
   timer_menu.on(
     'back', () => { set_timer_view_menu(tri_timer); }
@@ -592,22 +592,23 @@ function set_timer_menu(tri_timer) {
 
 
 function delete_tri_timer(tri_timer) {
-  const idx = tri_timers.indexOf(tri_timer);
+  const idx = ui_tri_timers.indexOf(tri_timer);
   if (idx !== -1) {
-    tri_timers.splice(idx, 1);
+    ui_tri_timers.splice(idx, 1);
   } else {
     console.warn('delete_tri_timer: Tried to delete a timer not in list')
   }
   // Return another timer to switch UI to after deleting the focused
   // one
-  return tri_timers[Math.min(idx, tri_timers.length - 1)];
+  return ui_tri_timers[Math.min(idx, ui_tri_timers.length - 1)];
 }
 
 function add_tri_timer(tri_timer) {
   // Create a copy of current timer object
   const new_timer = TriangleTimer.load(tri_timer.dump());
   new_timer.name = 'New';       // temp
-  tri_timers.push(new_timer);
+  ui_tri_timers.push(new_timer);
+  focused_tri_timer = new_timer;
   return new_timer;
 }
 
@@ -615,22 +616,19 @@ function add_tri_timer(tri_timer) {
 Bangle.loadWidgets();
 Bangle.drawWidgets();
 
-let tri_timer = new TriangleTimer(
+let focused_tri_timer = new TriangleTimer(
   'Up',
   new PrimitiveTimer(210, 0.001, false),
   10
 );
-tri_timers = [tri_timer];
-tri_timer = new TriangleTimer(
+ui_tri_timers = [focused_tri_timer];
+focused_tri_timer = new TriangleTimer(
   'Down',
   new PrimitiveTimer(55, -0.001, false),
   1
 );
-tri_timers.push(tri_timer);
-tri_timer = tri_timers[0];
+ui_tri_timers.push(focused_tri_timer);
+focused_tri_timer = ui_tri_timers[0];
 
 current_UI = null;
-set_timer_view(tri_timer);
-
-const timer_view = new TimerView(tri_timer);
-const timer_view_menu = new TimerViewMenu(tri_timer);
+set_timer_view(focused_tri_timer);
