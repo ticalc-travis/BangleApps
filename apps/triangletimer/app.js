@@ -346,8 +346,9 @@ class TimerViewMenu {
       'Reset': () => { E.showMenu(reset_menu); },
       'Edit': this.edit_menu.bind(this),
       'Add': () => {
-        this.tri_timer = add_tri_timer(this.tri_timer);
-        this.edit_menu();
+        const new_timer = add_tri_timer(this.tri_timer);
+        const timer_view_menu = new TimerViewMenu(new_timer);
+        timer_view_menu.edit_menu();
       },
       'Delete': () => { E.showMenu(delete_menu); },
       'Timers': () => { switch_UI(new TimerMenu(ui_tri_timers)); }
@@ -461,7 +462,7 @@ class TimerViewMenu {
   }
 
   edit_start_hms_menu() {
-    const timer = this.tri_timer.timer
+    const timer = this.tri_timer.timer;
     let origin_hms = {
       h: Math.floor(timer.origin / 3600),
       m: Math.floor(timer.origin / 60) % 60,
@@ -564,7 +565,7 @@ function delete_tri_timer(tri_timer) {
   if (idx !== -1) {
     ui_tri_timers.splice(idx, 1);
   } else {
-    console.warn('delete_tri_timer: Tried to delete a timer not in list')
+    console.warn('delete_tri_timer: Tried to delete a timer not in list');
   }
   // Return another timer to switch UI to after deleting the focused
   // one
@@ -574,9 +575,8 @@ function delete_tri_timer(tri_timer) {
 function add_tri_timer(tri_timer) {
   // Create a copy of current timer object
   const new_timer = TriangleTimer.load(tri_timer.dump());
-  new_timer.name = 'New';       // temp
+  new_timer.name = 'New';       // temp testing/debugging
   ui_tri_timers.push(new_timer);
-  focused_tri_timer = new_timer;
   return new_timer;
 }
 
