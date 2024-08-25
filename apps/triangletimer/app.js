@@ -546,9 +546,8 @@ class TimerMenu {
       }
     };
     this.tri_timers.forEach((tri_timer) => {
-      menu[tri_timer.display_name()] = () => {
-        switch_UI(new TimerView(tri_timer));
-      };
+      menu[tri_timer.display_status() + ' ' + tri_timer.display_name()] =
+        () => { switch_UI(new TimerView(tri_timer)); };
     });
     E.showMenu(menu);
   }
