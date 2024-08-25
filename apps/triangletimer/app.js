@@ -425,7 +425,7 @@ class TimerViewMenu {
       },
       'Outer': {
         value: origin_tri[0],
-        min: this.tri_timer.increment,
+        min: 0,
         max: Math.floor(9999 / this.tri_timer.increment)
           * this.tri_timer.increment,
         step: this.tri_timer.increment,
@@ -444,7 +444,7 @@ class TimerViewMenu {
       },
       'Inner': {
         value: origin_tri[1],
-        min: 1,
+        min: 0,
         max: origin_tri[0],
         step: 1,
         wrap: true,
