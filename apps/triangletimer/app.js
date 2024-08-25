@@ -345,7 +345,9 @@ class TimerViewMenu {
         back: this.back.bind(this)
       },
       'Reset': () => { E.showMenu(reset_menu); },
-      'Timers': () => { switch_UI(new TimerMenu(ui_tri_timers)); },
+      'Timers': () => {
+        switch_UI(new TimerMenu(ui_tri_timers, this.tri_timer));
+      },
       'Edit': this.edit_menu.bind(this),
       'Add': () => {
         const new_timer = add_tri_timer(this.tri_timer);
@@ -519,8 +521,9 @@ class TimerViewMenu {
 
 
 class TimerMenu {
-  constructor(tri_timers) {
+  constructor(tri_timers, focused_timer) {
     this.tri_timers = tri_timers;
+    this.focused_timer = focused_timer
   }
 
   start() {
@@ -532,7 +535,7 @@ class TimerMenu {
   }
 
   back() {
-    switch_UI(new TimerViewMenu(this.tri_timer));
+    switch_UI(new TimerViewMenu(this.focused_timer));
   }
 
   top_menu() {
