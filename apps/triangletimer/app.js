@@ -344,6 +344,7 @@ class TimerViewMenu {
         back: this.back.bind(this)
       },
       'Reset': () => { E.showMenu(reset_menu); },
+      'Timers': () => { switch_UI(new TimerMenu(ui_tri_timers)); },
       'Edit': this.edit_menu.bind(this),
       'Add': () => {
         const new_timer = add_tri_timer(this.tri_timer);
@@ -351,7 +352,6 @@ class TimerViewMenu {
         timer_view_menu.edit_menu();
       },
       'Delete': () => { E.showMenu(delete_menu); },
-      'Timers': () => { switch_UI(new TimerMenu(ui_tri_timers)); }
     };
     if (ui_tri_timers.length <= 1) {
       // Prevent user deleting last timer
