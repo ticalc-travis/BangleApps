@@ -312,6 +312,7 @@ class TimerView {
     }
     this.render('buttons');
     this.render('status');
+    this.render('timer');
   }
 }
 
