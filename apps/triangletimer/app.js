@@ -1,4 +1,7 @@
 const Layout = require('Layout');
+const Storage = require('Storage');
+
+const TIMERS_FILENAME = 'triangletimer.timers.json';
 
 
 class PrimitiveTimer {
@@ -313,6 +316,7 @@ class TimerView {
     this.render('buttons');
     this.render('status');
     this.render('timer');
+    this.emit('dirty_timers');
   }
 }
 
@@ -334,10 +338,6 @@ class TimerViewMenu {
     switch_UI(new TimerView(this.tri_timer));
   }
 
-  reset_timer() {
-    this.tri_timer.timer.reset();
-  }
-
   top_menu() {
     top_menu = {
       '': {
@@ -350,6 +350,7 @@ class TimerViewMenu {
       },
       'Edit': this.edit_menu.bind(this),
       'Add': () => {
+        this.emit('dirty_timers');
         const new_timer = add_tri_timer(this.tri_timer);
         const timer_view_menu = new TimerViewMenu(new_timer);
         timer_view_menu.edit_menu();
@@ -368,6 +369,7 @@ class TimerViewMenu {
       },
       'Reset': () => {
         this.tri_timer.timer.reset();
+        this.emit('dirty_timers');
         this.back();
       },
       'Cancel': () => { E.showMenu(top_menu); },
@@ -379,6 +381,7 @@ class TimerViewMenu {
         back: () => { E.showMenu(top_menu); }
       },
       'Delete': () => {
+        this.emit('dirty_timers');
         switch_UI(new TimerView(delete_tri_timer(this.tri_timer)));
       },
       'Cancel': () => { E.showMenu(top_menu); },
@@ -398,6 +401,7 @@ class TimerViewMenu {
         format: v => (v ? 'Up' : 'Down'),
         onchange: v => {
           this.tri_timer.timer.rate = -this.tri_timer.timer.rate;
+          this.emit('dirty_timers');
         }
       },
       'Start (Tri)': this.edit_start_tri_menu.bind(this),
@@ -410,6 +414,7 @@ class TimerViewMenu {
         wrap: true,
         onchange: v => {
           this.tri_timer.increment = v;
+          this.emit('dirty_timers');
         },
       }
     };
@@ -443,6 +448,7 @@ class TimerViewMenu {
           this.tri_timer.timer.origin = as_linear(
             origin_tri, this.tri_timer.increment
           );
+          this.emit('dirty_timers');
         }
       },
       'Inner': {
@@ -457,6 +463,7 @@ class TimerViewMenu {
           this.tri_timer.timer.origin = as_linear(
             origin_tri, this.tri_timer.increment
           );
+          this.emit('dirty_timers');
         }
       },
     };
@@ -491,6 +498,7 @@ class TimerViewMenu {
         onchange: v => {
           origin_hms.h = v;
           update_origin();
+          this.emit('dirty_timers');
         }
       },
       'Minutes': {
@@ -501,6 +509,7 @@ class TimerViewMenu {
         onchange: v => {
           origin_hms.m = v;
           update_origin();
+          this.emit('dirty_timers');
         }
       },
       'Seconds': {
@@ -511,6 +520,7 @@ class TimerViewMenu {
         onchange: v => {
           origin_hms.s = v;
           update_origin();
+          this.emit('dirty_timers');
         }
       },
     };
@@ -559,6 +569,7 @@ function switch_UI(new_UI) {
     current_UI.stop();
   }
   current_UI = new_UI;
+  current_UI.on('dirty_timers', schedule_save_ui_timers);
   current_UI.start();
 }
 
@@ -584,22 +595,54 @@ function add_tri_timer(tri_timer) {
 }
 
 
+function load_timers() {
+  console.log('loading timers');
+  let timers = Storage.readJSON(TIMERS_FILENAME, true);
+  if (timers) {
+    // Deserealize timer objects
+    timers = timers.map(t => TriangleTimer.load(t))
+  } else {
+    // New configuration with one defined default timer
+    timers = [
+      new TriangleTimer(
+        '', new PrimitiveTimer(0, 0.001, false), 1
+      )
+    ];
+  }
+  return timers;
+}
+
+function save_timers(timers) {
+  console.log('saving timers');
+  timers = timers.map(t => t.dump());
+  if (!Storage.writeJSON(TIMERS_FILENAME, timers)) {
+    E.showAlert('Trouble saving timers');
+  }
+}
+
+const SCHEDULED_SAVE_TIMEOUT = 15000
+var save_timeout = null;
+
+function schedule_save_ui_timers() {
+  if (save_timeout === null) {
+    console.log('scheduling timer save');
+    save_timeout = setTimeout(() => {
+      save_timers(ui_tri_timers);
+      save_timeout = null;
+    }, SCHEDULED_SAVE_TIMEOUT);
+  } else {
+    console.log('timer save already scheduled');
+  }
+}
+
+
 Bangle.loadWidgets();
 Bangle.drawWidgets();
 
-let focused_tri_timer = new TriangleTimer(
-  'Up',
-  new PrimitiveTimer(210, 0.001, false),
-  10
-);
-ui_tri_timers = [focused_tri_timer];
-focused_tri_timer = new TriangleTimer(
-  'Down',
-  new PrimitiveTimer(55, -0.001, false),
-  1
-);
-ui_tri_timers.push(focused_tri_timer);
-focused_tri_timer = ui_tri_timers[0];
+var ui_tri_timers = load_timers();
+var focused_tri_timer = ui_tri_timers[0];
+var current_UI = null;
 
-current_UI = null;
+E.on('kill', () => { save_timers(ui_tri_timers); });
+
 switch_UI(new TimerView(focused_tri_timer));
