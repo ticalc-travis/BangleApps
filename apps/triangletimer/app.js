@@ -1,8 +1,8 @@
 const Layout = require('Layout');
 const Storage = require('Storage');
 
-const TIMERS_FILENAME = 'triangletimer.timers.json';
 
+// Data models //
 
 class PrimitiveTimer {
   constructor(origin, rate, is_running) {
@@ -162,8 +162,7 @@ function as_linear(triangle_time, increment) {
 }
 
 
-//// UI ////
-
+// UI //
 
 class TimerView {
   constructor(tri_timer) {
@@ -178,6 +177,7 @@ class TimerView {
     this._initLayout();
     this.layout.clear();
     this.render();
+    set_last_viewed_timer(this.tri_timer);
   }
 
   stop() {
@@ -346,7 +346,7 @@ class TimerViewMenu {
       },
       'Reset': () => { E.showMenu(reset_menu); },
       'Timers': () => {
-        switch_UI(new TimerMenu(ui_tri_timers, this.tri_timer));
+        switch_UI(new TimerMenu(TIMERS, this.tri_timer));
       },
       'Edit': this.edit_menu.bind(this),
       'Add': () => {
@@ -357,7 +357,7 @@ class TimerViewMenu {
       },
       'Delete': () => { E.showMenu(delete_menu); },
     };
-    if (ui_tri_timers.length <= 1) {
+    if (TIMERS.length <= 1) {
       // Prevent user deleting last timer
       delete top_menu.Delete;
     }
@@ -533,7 +533,7 @@ class TimerViewMenu {
 class TimerMenu {
   constructor(tri_timers, focused_timer) {
     this.tri_timers = tri_timers;
-    this.focused_timer = focused_timer
+    this.focused_timer = focused_timer;
   }
 
   start() {
@@ -565,42 +565,63 @@ class TimerMenu {
 
 
 function switch_UI(new_UI) {
-  if (current_UI) {
-    current_UI.stop();
+  if (CURRENT_UI) {
+    CURRENT_UI.stop();
   }
-  current_UI = new_UI;
-  current_UI.on('dirty_timers', schedule_save_ui_timers);
-  current_UI.start();
+  CURRENT_UI = new_UI;
+  CURRENT_UI.on('dirty_timers', schedule_save_timers);
+  CURRENT_UI.on('dirty_settings', schedule_save_settings);
+  CURRENT_UI.start();
 }
 
 
 function delete_tri_timer(tri_timer) {
-  const idx = ui_tri_timers.indexOf(tri_timer);
+  const idx = TIMERS.indexOf(tri_timer);
   if (idx !== -1) {
-    ui_tri_timers.splice(idx, 1);
+    TIMERS.splice(idx, 1);
   } else {
     console.warn('delete_tri_timer: Tried to delete a timer not in list');
   }
   // Return another timer to switch UI to after deleting the focused
   // one
-  return ui_tri_timers[Math.min(idx, ui_tri_timers.length - 1)];
+  return TIMERS[Math.min(idx, TIMERS.length - 1)];
 }
 
 function add_tri_timer(tri_timer) {
   // Create a copy of current timer object
   const new_timer = TriangleTimer.load(tri_timer.dump());
   new_timer.name = 'New';       // temp testing/debugging
-  ui_tri_timers.push(new_timer);
+  TIMERS.push(new_timer);
   return new_timer;
 }
 
+
+function set_last_viewed_timer(tri_timer) {
+  SETTINGS.last_viewed_timer = TIMERS.indexOf(tri_timer);
+  schedule_save_settings();
+}
+
+
+// Persistent state //
+
+const TIMERS_FILENAME = 'triangletimer.timers.json';
+const SETTINGS_FILENAME = 'triangletimer.json';
+
+const SCHEDULED_SAVE_TIMEOUT = 15000;
+
+const SETTINGS = Object.assign({
+  'last_viewed_timer': 0,
+}, Storage.readJSON(SETTINGS_FILENAME, true) || {});
+
+var SAVE_TIMERS_TIMEOUT = null;
+var SAVE_SETTINGS_TIMEOUT = null;
 
 function load_timers() {
   console.log('loading timers');
   let timers = Storage.readJSON(TIMERS_FILENAME, true);
   if (timers) {
     // Deserealize timer objects
-    timers = timers.map(t => TriangleTimer.load(t))
+    timers = timers.map(t => TriangleTimer.load(t));
   } else {
     // New configuration with one defined default timer
     timers = [
@@ -620,18 +641,34 @@ function save_timers(timers) {
   }
 }
 
-const SCHEDULED_SAVE_TIMEOUT = 15000
-var save_timeout = null;
-
-function schedule_save_ui_timers() {
-  if (save_timeout === null) {
+function schedule_save_timers() {
+  if (SAVE_TIMERS_TIMEOUT === null) {
     console.log('scheduling timer save');
-    save_timeout = setTimeout(() => {
-      save_timers(ui_tri_timers);
-      save_timeout = null;
+    SAVE_TIMERS_TIMEOUT = setTimeout(() => {
+      save_timers(TIMERS);
+      SAVE_TIMERS_TIMEOUT = null;
     }, SCHEDULED_SAVE_TIMEOUT);
   } else {
     console.log('timer save already scheduled');
+  }
+}
+
+function save_settings(settings) {
+  console.log('saving settings');
+  if (!Storage.writeJSON(SETTINGS_FILENAME, settings)) {
+    E.showAlert('Trouble saving settings');
+  }
+}
+
+function schedule_save_settings() {
+  if (SAVE_SETTINGS_TIMEOUT === null) {
+    console.log('scheduling settings save');
+    SAVE_SETTINGS_TIMEOUT = setTimeout(() => {
+      save_settings(SETTINGS);
+      SAVE_SETTINGS_TIMEOUT = null;
+    }, SCHEDULED_SAVE_TIMEOUT);
+  } else {
+    console.log('settings save already scheduled');
   }
 }
 
@@ -639,10 +676,12 @@ function schedule_save_ui_timers() {
 Bangle.loadWidgets();
 Bangle.drawWidgets();
 
-var ui_tri_timers = load_timers();
-var focused_tri_timer = ui_tri_timers[0];
-var current_UI = null;
+var TIMERS = load_timers();
+var CURRENT_UI = null;
 
-E.on('kill', () => { save_timers(ui_tri_timers); });
+E.on('kill', () => { save_timers(TIMERS); });
+E.on('kill', () => { save_settings(SETTINGS); });
 
-switch_UI(new TimerView(focused_tri_timer));
+switch_UI(new TimerView(
+  TIMERS[SETTINGS.last_viewed_timer] || TIMERS[0]
+));
