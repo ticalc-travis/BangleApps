@@ -591,14 +591,21 @@ function add_tri_timer(tri_timer) {
   // Create a copy of current timer object
   const new_timer = TriangleTimer.load(tri_timer.dump());
   new_timer.name = 'New';       // temp testing/debugging
-  TIMERS.push(new_timer);
+  TIMERS.unshift(new_timer);
   return new_timer;
 }
 
 
 function set_last_viewed_timer(tri_timer) {
-  SETTINGS.last_viewed_timer = TIMERS.indexOf(tri_timer);
-  schedule_save_settings();
+  const idx = TIMERS.indexOf(tri_timer);
+  if (idx != -1) {
+    // Move tri_timer to top of list
+    TIMERS.splice(idx, 1);
+    TIMERS.unshift(tri_timer);
+    schedule_save_timers();
+  } else {
+    console.warn('Bug? `set_last_viewed_timer` called with a timer not found in list');
+  }
 }
 
 
@@ -610,7 +617,8 @@ const SETTINGS_FILENAME = 'triangletimer.json';
 const SCHEDULED_SAVE_TIMEOUT = 15000;
 
 const SETTINGS = Object.assign({
-  'last_viewed_timer': 0,
+// Global settings go here
+//  'last_viewed_timer': 0,
 }, Storage.readJSON(SETTINGS_FILENAME, true) || {});
 
 var SAVE_TIMERS_TIMEOUT = null;
@@ -682,6 +690,4 @@ var CURRENT_UI = null;
 E.on('kill', () => { save_timers(TIMERS); });
 E.on('kill', () => { save_settings(SETTINGS); });
 
-switch_UI(new TimerView(
-  TIMERS[SETTINGS.last_viewed_timer] || TIMERS[0]
-));
+switch_UI(new TimerView(TIMERS[0]));
