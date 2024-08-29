@@ -1,4 +1,5 @@
 const Layout = require('Layout');
+const Sched = require('sched');
 const Storage = require('Storage');
 
 
@@ -80,6 +81,8 @@ class TriangleTimer {
     this.timer = primitive_timer;
     if (increment === undefined) increment = 1;
     this.increment = increment;
+
+    this.end_alarm = false;
   }
 
   display_name() {
@@ -117,13 +120,23 @@ class TriangleTimer {
     return status;
   }
 
+  time_to_next_alarm() {
+    // TODO: Outer timer points, the hard part
+    if (!this.timer.is_running() || this.timer.rate >= 0
+       || this.timer.get() < 0) {
+      return null;
+    }
+    return this.timer.get() / Math.abs(this.timer.rate);
+  }
+
   dump() {
     return {
       cls: 'TriangleTimer',
       version: 0,
       name: this.name,
       timer: this.timer.dump(),
-      increment: this.increment
+      increment: this.increment,
+      end_alarm: this.end_alarm,
     };
   }
 
@@ -131,7 +144,12 @@ class TriangleTimer {
     if (!(data.cls == 'TriangleTimer' && data.version == 0)) {
       console.error('Incompatible data type for loading TriangleTimer state');
     }
-    return new this(data.name, PrimitiveTimer.load(data.timer), data.increment);
+    let new_timer = new this(
+      data.name,
+      PrimitiveTimer.load(data.timer),
+      data.increment);
+    new_timer.end_alarm = data.end_alarm;
+    return new_timer;
   }
 }
 
@@ -415,7 +433,8 @@ class TimerViewMenu {
           this.tri_timer.increment = v;
           this.emit('dirty_timers');
         },
-      }
+      },
+      'Events': this.edit_events_menu.bind(this),
     };
 
     E.showMenu(edit_menu);
@@ -525,6 +544,22 @@ class TimerViewMenu {
     };
 
     E.showMenu(edit_start_hms_menu);
+  }
+
+  edit_events_menu() {
+    const events_menu = {
+      '': {
+        title: 'Events',
+        back: () => { this.edit_menu(); }
+      },
+      'End alarm': {
+        value: this.tri_timer.end_alarm,
+        format: v => (v ? 'On' : 'Off'),
+        onchange: v => { this.tri_timer.end_alarm = v; },
+      },
+    };
+
+    E.showMenu(events_menu);
   }
 }
 
@@ -679,6 +714,32 @@ function schedule_save_settings() {
   }
 }
 
+
+// Alarm handling //
+
+function delete_system_alarms() {
+  var alarms = Sched.getAlarms().filter(a => a.appid == 'triangletimer');
+  for (alarm of alarms) {
+    console.debug('delete alarm ' + alarm.id);
+    Sched.setAlarm(alarm.id, undefined);
+  }
+}
+
+function set_system_alarms() {
+  for (idx = 0; idx < TIMERS.length; idx++) {
+    let timer = TIMERS[idx];
+    let time_to_next_alarm = timer.time_to_next_alarm();
+    if (time_to_next_alarm !== null) {
+      console.debug('set alarm ' + idx);
+      Sched.setAlarm(idx.toString(), {
+        appid: 'triangletimer',
+        timer: time_to_next_alarm,
+        msg: timer.display_name(),
+        data: { idx: idx }
+      });
+    }
+  }
+}
 
 Bangle.loadWidgets();
 Bangle.drawWidgets();
