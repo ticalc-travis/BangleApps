@@ -625,8 +625,8 @@ var SAVE_SETTINGS_TIMEOUT = null;
 
 function load_timers() {
   console.log('loading timers');
-  let timers = Storage.readJSON(TIMERS_FILENAME, true);
-  if (timers) {
+  let timers = Storage.readJSON(TIMERS_FILENAME, true) || [];
+  if (timers.length) {
     // Deserealize timer objects
     timers = timers.map(t => TriangleTimer.load(t));
   } else {
