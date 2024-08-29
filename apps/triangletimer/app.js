@@ -338,7 +338,7 @@ class TimerViewMenu {
   }
 
   top_menu() {
-    top_menu = {
+    const top_menu = {
       '': {
         title: this.tri_timer.display_name(),
         back: this.back.bind(this)
@@ -361,7 +361,7 @@ class TimerViewMenu {
       delete top_menu.Delete;
     }
 
-    reset_menu = {
+    const reset_menu = {
       '': {
         title: 'Confirm reset',
         back: () => { E.showMenu(top_menu); }
@@ -374,7 +374,7 @@ class TimerViewMenu {
       'Cancel': () => { E.showMenu(top_menu); },
     };
 
-    delete_menu = {
+    const delete_menu = {
       '': {
         title: 'Confirm delete',
         back: () => { E.showMenu(top_menu); }
@@ -390,7 +390,7 @@ class TimerViewMenu {
   }
 
   edit_menu() {
-    edit_menu = {
+    const edit_menu = {
       '': {
         title: 'Edit: ' + this.tri_timer.display_name(),
         back: () => { this.top_menu(); },
@@ -425,7 +425,7 @@ class TimerViewMenu {
     let origin_tri = as_triangle(
       this.tri_timer.timer.origin, this.tri_timer.increment);
 
-    edit_start_tri_menu = {
+    const edit_start_tri_menu = {
       '': {
         title: 'Start (Tri)',
         back: this.edit_menu.bind(this),
@@ -484,7 +484,7 @@ class TimerViewMenu {
         + origin_hms.s;
     }
 
-    edit_start_hms_menu = {
+    const edit_start_hms_menu = {
       '': {
         title: 'Start (HMS)',
         back: this.edit_menu.bind(this),
