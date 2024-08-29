@@ -95,9 +95,7 @@ class TriangleTimer {
       this.timer.origin,
       this.increment
     );
-    return this.display_status()
-      + ' '
-      + (this.timer.rate >= 0 ? 'U' : 'D')
+    return (this.timer.rate >= 0 ? 'U' : 'D')
       + ' '
       + origin_as_tri[0] + '/' + origin_as_tri[1]
       + ' x' + this.increment;
@@ -283,7 +281,8 @@ class TimerView {
         this.tri_timer.increment
       );
       this.layout.row3.label =
-        this.tri_timer.provisional_name();
+        this.tri_timer.display_status()
+        + ' ' + this.tri_timer.provisional_name();
       this.layout.clear(this.layout.row3);
       this.layout.render(this.layout.row3);
     }
