@@ -121,12 +121,13 @@ class TriangleTimer {
   }
 
   time_to_next_alarm() {
-    // TODO: Outer timer points, the hard part
-    if (!this.timer.is_running() || this.timer.rate >= 0
-       || this.timer.get() < 0) {
-      return null;
+    if (this.end_alarm
+        && this.timer.is_running()
+        && this.timer.rate <= 0
+        && this.timer.get() > 0) {
+      return this.timer.get() / Math.abs(this.timer.rate);
     }
-    return this.timer.get() / Math.abs(this.timer.rate);
+    return null;
   }
 
   dump() {
@@ -603,6 +604,7 @@ function switch_UI(new_UI) {
     CURRENT_UI.stop();
   }
   CURRENT_UI = new_UI;
+  CURRENT_UI.on('dirty_timers', update_system_alarms);
   CURRENT_UI.on('dirty_timers', schedule_save_timers);
   CURRENT_UI.on('dirty_settings', schedule_save_settings);
   CURRENT_UI.start();
@@ -624,7 +626,6 @@ function delete_tri_timer(tri_timer) {
 function add_tri_timer(tri_timer) {
   // Create a copy of current timer object
   const new_timer = TriangleTimer.load(tri_timer.dump());
-  new_timer.name = 'New';       // temp testing/debugging
   TIMERS.unshift(new_timer);
   return new_timer;
 }
@@ -720,9 +721,10 @@ function schedule_save_settings() {
 function delete_system_alarms() {
   var alarms = Sched.getAlarms().filter(a => a.appid == 'triangletimer');
   for (alarm of alarms) {
-    console.debug('delete alarm ' + alarm.id);
+    console.debug('delete sched alarm ' + alarm.id);
     Sched.setAlarm(alarm.id, undefined);
   }
+  Sched.reload();
 }
 
 function set_system_alarms() {
@@ -730,16 +732,26 @@ function set_system_alarms() {
     let timer = TIMERS[idx];
     let time_to_next_alarm = timer.time_to_next_alarm();
     if (time_to_next_alarm !== null) {
-      console.debug('set alarm ' + idx);
+      console.debug('set sched alarm ' + idx + ' (' + time_to_next_alarm/1000 + ')');
       Sched.setAlarm(idx.toString(), {
         appid: 'triangletimer',
         timer: time_to_next_alarm,
         msg: timer.display_name(),
-        data: { idx: idx }
+        js: "console.log('alarm " + idx + " fired');",
+        data: { idx: idx },
+        del: true,
       });
     }
   }
+  Sched.reload();
 }
+
+function update_system_alarms() {
+  delete_system_alarms();
+  set_system_alarms();
+}
+
+// Load and start up app //
 
 Bangle.loadWidgets();
 Bangle.drawWidgets();
@@ -749,5 +761,7 @@ var CURRENT_UI = null;
 
 E.on('kill', () => { save_timers(TIMERS); });
 E.on('kill', () => { save_settings(SETTINGS); });
+
+update_system_alarms();
 
 switch_UI(new TimerView(TIMERS[0]));
