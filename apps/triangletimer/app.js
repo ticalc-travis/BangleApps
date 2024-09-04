@@ -83,6 +83,7 @@ class TriangleTimer {
     this.increment = increment;
 
     this.end_alarm = false;
+    this.outer_alarm = false;
   }
 
   display_name() {
@@ -121,12 +122,23 @@ class TriangleTimer {
   }
 
   time_to_next_alarm() {
+    if (!this.timer.is_running())
+      return null;
+
+    if (this.outer_alarm) {
+      let as_tri = as_triangle(this.timer.get(), this.increment);
+      if (this.timer.rate > 0) {
+        as_tri[1] = as_tri[0] - as_tri[1];
+      }
+      return as_tri[1] / Math.abs(this.timer.rate);
+    }
+
     if (this.end_alarm
-        && this.timer.is_running()
         && this.timer.rate <= 0
         && this.timer.get() > 0) {
       return this.timer.get() / Math.abs(this.timer.rate);
     }
+
     return null;
   }
 
@@ -138,6 +150,7 @@ class TriangleTimer {
       timer: this.timer.dump(),
       increment: this.increment,
       end_alarm: this.end_alarm,
+      outer_alarm: this.outer_alarm,
     };
   }
 
@@ -150,6 +163,7 @@ class TriangleTimer {
       PrimitiveTimer.load(data.timer),
       data.increment);
     new_timer.end_alarm = data.end_alarm;
+    new_timer.outer_alarm = data.outer_alarm;
     return new_timer;
   }
 }
@@ -557,6 +571,11 @@ class TimerViewMenu {
         value: this.tri_timer.end_alarm,
         format: v => (v ? 'On' : 'Off'),
         onchange: v => { this.tri_timer.end_alarm = v; },
+      },
+      'Outer alarm': {
+        value: this.tri_timer.outer_alarm,
+        format: v => (v ? 'On' : 'Off'),
+        onchange: v => { this.tri_timer.outer_alarm = v; },
       },
     };
 
