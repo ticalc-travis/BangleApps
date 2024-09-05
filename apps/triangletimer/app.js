@@ -756,7 +756,7 @@ function set_system_alarms() {
         appid: 'triangletimer',
         timer: time_to_next_alarm,
         msg: timer.display_name(),
-        js: "console.log('alarm " + idx + " fired');",
+        js: "load('triangletimer.alarm.js');",
         data: { idx: idx },
         del: true,
       });

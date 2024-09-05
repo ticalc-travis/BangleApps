@@ -10,7 +10,8 @@
   "dependencies": {"scheduler": "type"},
   "storage": [
     {"name": "triangletimer.app.js", "url": "app.js"},
-    {"name": "triangletimer.img", "url": "app-icon.js", "evaluate": true},
+    {"name": "triangletimer.alarm.js", "url": "alarm.js"},
+    {"name": "triangletimer.img", "url": "app-icon.js", "evaluate": true}
   ],
   "data": [
     {"name": "triangletimer.json"}
