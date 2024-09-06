@@ -348,7 +348,7 @@ class TimerView {
     this.render('buttons');
     this.render('status');
     this.render('timer');
-    this.emit('dirty_timers');
+    set_timers_dirty();
   }
 }
 
@@ -382,7 +382,7 @@ class TimerViewMenu {
       },
       'Edit': this.edit_menu.bind(this),
       'Add': () => {
-        this.emit('dirty_timers');
+        set_timers_dirty();
         const new_timer = add_tri_timer(this.tri_timer);
         const timer_view_menu = new TimerViewMenu(new_timer);
         timer_view_menu.edit_menu();
@@ -401,7 +401,7 @@ class TimerViewMenu {
       },
       'Reset': () => {
         this.tri_timer.timer.reset();
-        this.emit('dirty_timers');
+        set_timers_dirty();
         this.back();
       },
       'Cancel': () => { E.showMenu(top_menu); },
@@ -413,7 +413,7 @@ class TimerViewMenu {
         back: () => { E.showMenu(top_menu); }
       },
       'Delete': () => {
-        this.emit('dirty_timers');
+        set_timers_dirty();
         switch_UI(new TimerView(delete_tri_timer(this.tri_timer)));
       },
       'Cancel': () => { E.showMenu(top_menu); },
@@ -433,7 +433,7 @@ class TimerViewMenu {
         format: v => (v ? 'Up' : 'Down'),
         onchange: v => {
           this.tri_timer.timer.rate = -this.tri_timer.timer.rate;
-          this.emit('dirty_timers');
+          set_timers_dirty();
         }
       },
       'Start (Tri)': this.edit_start_tri_menu.bind(this),
@@ -446,7 +446,7 @@ class TimerViewMenu {
         wrap: true,
         onchange: v => {
           this.tri_timer.increment = v;
-          this.emit('dirty_timers');
+          set_timers_dirty();
         },
       },
       'Events': this.edit_events_menu.bind(this),
@@ -481,7 +481,7 @@ class TimerViewMenu {
           this.tri_timer.timer.origin = as_linear(
             origin_tri, this.tri_timer.increment
           );
-          this.emit('dirty_timers');
+          set_timers_dirty();
         }
       },
       'Inner': {
@@ -496,7 +496,7 @@ class TimerViewMenu {
           this.tri_timer.timer.origin = as_linear(
             origin_tri, this.tri_timer.increment
           );
-          this.emit('dirty_timers');
+          set_timers_dirty();
         }
       },
     };
@@ -531,7 +531,7 @@ class TimerViewMenu {
         onchange: v => {
           origin_hms.h = v;
           update_origin();
-          this.emit('dirty_timers');
+          set_timers_dirty();
         }
       },
       'Minutes': {
@@ -542,7 +542,7 @@ class TimerViewMenu {
         onchange: v => {
           origin_hms.m = v;
           update_origin();
-          this.emit('dirty_timers');
+          set_timers_dirty();
         }
       },
       'Seconds': {
@@ -553,7 +553,7 @@ class TimerViewMenu {
         onchange: v => {
           origin_hms.s = v;
           update_origin();
-          this.emit('dirty_timers');
+          set_timers_dirty();
         }
       },
     };
@@ -623,12 +623,17 @@ function switch_UI(new_UI) {
     CURRENT_UI.stop();
   }
   CURRENT_UI = new_UI;
-  CURRENT_UI.on('dirty_timers', update_system_alarms);
-  CURRENT_UI.on('dirty_timers', schedule_save_timers);
-  CURRENT_UI.on('dirty_settings', schedule_save_settings);
   CURRENT_UI.start();
 }
 
+function set_timers_dirty() {
+  update_system_alarms();
+  schedule_save_timers();
+}
+
+function set_settings_dirty() {
+  schedule_save_settings();
+}
 
 function delete_tri_timer(tri_timer) {
   const idx = TIMERS.indexOf(tri_timer);
@@ -660,7 +665,7 @@ function set_last_viewed_timer(tri_timer) {
     // Move tri_timer to top of list
     TIMERS.splice(idx, 1);
     TIMERS.unshift(tri_timer);
-    schedule_save_timers();
+    set_timers_dirty();
   }
 }
 
