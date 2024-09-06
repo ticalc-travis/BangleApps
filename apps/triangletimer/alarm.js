@@ -1,10 +1,3 @@
-// // Chances are boot0.js got run already and scheduled *another*
-// // 'load(sched.js)' - so let's remove it first!
-// if (Bangle.SCHED) {
-//   clearInterval(Bangle.SCHED);
-//   delete Bangle.SCHED;
-// }
-
 function showAlarm(alarm) {
   const alarmIndex = alarms.indexOf(alarm);
   const settings = require("sched").getSettings();
@@ -26,45 +19,39 @@ function showAlarm(alarm) {
   let buzzCount = settings.buzzCount;
 
   E.showPrompt(message, {
-    title: alarm.timer ? /*LANG*/"TIMER!" : /*LANG*/"ALARM!",
-    buttons: { /*LANG*/"Snooze": true, /*LANG*/"Stop": false } // default is sleep so it'll come back in some mins
-  }).then(function (sleep) {
+    title: 'Triangle timer',
+    buttons: { "Goto": true, "OK": false }
+  }).then(function (go) {
     buzzCount = 0;
 
-    if (sleep) {
-      if (alarm.ot === undefined) {
-        alarm.ot = alarm.t;
-      }
-      let time = new Date();
-      let currentTime = (time.getHours()*3600000)+(time.getMinutes()*60000)+(time.getSeconds()*1000);
-      alarm.t = currentTime + settings.defaultSnoozeMillis;
-      alarm.t %= 86400000;
-      Bangle.emit("alarmSnooze", alarm);
+    let del = alarm.del === undefined ? settings.defaultDeleteExpiredTimers : alarm.del;
+    if (del) {
+      alarms.splice(alarmIndex, 1);
     } else {
-      let del = alarm.del === undefined ? settings.defaultDeleteExpiredTimers : alarm.del;
-      if (del) {
-        alarms.splice(alarmIndex, 1);
-      } else {
-        if (alarm.date && alarm.rp) {
-          setNextRepeatDate(alarm);
-        } else if (!alarm.timer) {
-          alarm.last = new Date().getDate();
-        }
-        if (alarm.ot !== undefined) {
-          alarm.t = alarm.ot;
-          delete alarm.ot;
-        }
-        if (!alarm.rp) {
-          alarm.on = false;
-        }
+      if (!alarm.timer) {
+        alarm.last = new Date().getDate();
       }
-      Bangle.emit("alarmDismiss", alarm);
+      if (alarm.ot !== undefined) {
+        alarm.t = alarm.ot;
+        delete alarm.ot;
+      }
+      if (!alarm.rp) {
+        alarm.on = false;
+      }
     }
+    Bangle.emit("alarmDismiss", alarm);
 
     // The updated alarm is still a member of 'alarms'
     // so writing to array writes changes back directly
     require("sched").setAlarms(alarms);
-    load('triangletimer.app.js');
+
+    if (go) {
+      // TODO: Need to set viewed timer here
+
+      load('triangletimer.app.js');
+    } else {
+      load();
+    }
   });
 
   function buzz() {
@@ -81,35 +68,6 @@ function showAlarm(alarm) {
         setTimeout(buzz, settings.defaultSnoozeMillis);
       }
     });
-  }
-
-  function setNextRepeatDate(alarm) {
-    let date = new Date(alarm.date);
-    let rp = alarm.rp;
-    if (rp===true) { // fallback in case rp is set wrong
-      date.setDate(date.getDate() + 1);
-    } else switch(rp.interval) { // rp is an object
-      case "day":
-        date.setDate(date.getDate() + rp.num);
-        break;
-      case "week":
-        date.setDate(date.getDate() + (rp.num * 7));
-        break;
-      case "month":
-        if (!alarm.od) alarm.od = date.getDate();
-        date = new Date(date.getFullYear(), date.getMonth() + rp.num, alarm.od);
-        if (date.getDate() != alarm.od) date.setDate(0);
-        break;
-      case "year":
-        if (!alarm.od) alarm.od = date.getDate();
-        date = new Date(date.getFullYear() + rp.num, date.getMonth(), alarm.od);
-        if (date.getDate() != alarm.od) date.setDate(0);
-        break;
-      default:
-        console.log(`sched: unknown repeat '${JSON.stringify(rp)}'`);
-        break;
-    }
-    alarm.date = date.toLocalISOString().slice(0,10);
   }
 
   if ((require("Storage").readJSON("setting.json", 1) || {}).quiet > 1)
