@@ -635,7 +635,7 @@ function delete_tri_timer(tri_timer) {
   if (idx !== -1) {
     TIMERS.splice(idx, 1);
   } else {
-    console.warn('delete_tri_timer: Tried to delete a timer not in list');
+    console.warn('delete_tri_timer: Bug? Tried to delete a timer not in list');
   }
   // Return another timer to switch UI to after deleting the focused
   // one
@@ -652,13 +652,15 @@ function add_tri_timer(tri_timer) {
 
 function set_last_viewed_timer(tri_timer) {
   const idx = TIMERS.indexOf(tri_timer);
-  if (idx != -1) {
+  if (idx == -1) {
+    console.warn('set_last_viewed_timer: Bug? Called with a timer not found in list');
+  } else if (idx == 0) {
+    console.debug('set_last_viewed_timer: Already set as last timer');
+  } else {
     // Move tri_timer to top of list
     TIMERS.splice(idx, 1);
     TIMERS.unshift(tri_timer);
     schedule_save_timers();
-  } else {
-    console.warn('Bug? `set_last_viewed_timer` called with a timer not found in list');
   }
 }
 
@@ -739,7 +741,7 @@ function schedule_save_settings() {
 
 function delete_system_alarms() {
   var alarms = Sched.getAlarms().filter(a => a.appid == 'triangletimer');
-  for (alarm of alarms) {
+  for (let alarm of alarms) {
     console.debug('delete sched alarm ' + alarm.id);
     Sched.setAlarm(alarm.id, undefined);
   }
