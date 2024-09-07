@@ -46,8 +46,9 @@ function showAlarm(alarm) {
     require("sched").setAlarms(alarms);
 
     if (go) {
-      // TODO: Need to set viewed timer here
-
+      const tt = require('triangletimer');
+      console.log('alarm ' + alarm.data.idx);
+      tt.set_last_viewed_timer(tt.TIMERS[alarm.data.idx]);
       load('triangletimer.app.js');
     } else {
       load();

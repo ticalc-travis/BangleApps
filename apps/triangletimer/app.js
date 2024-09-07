@@ -1,5 +1,4 @@
 const Layout = require('Layout');
-const Sched = require('sched');
 
 const tt = require('triangletimer');
 
@@ -443,9 +442,6 @@ Bangle.loadWidgets();
 Bangle.drawWidgets();
 
 var CURRENT_UI = null;
-
-E.on('kill', () => { tt.save_timers(); });
-E.on('kill', () => { tt.save_settings(); });
 
 tt.update_system_alarms();
 

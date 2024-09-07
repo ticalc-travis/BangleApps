@@ -1,4 +1,5 @@
 const Storage = require('Storage');
+const Sched = require('sched');
 
 
 // Data models //
@@ -344,6 +345,10 @@ function update_system_alarms() {
   delete_system_alarms();
   set_system_alarms();
 }
+
+
+E.on('kill', () => { save_timers(); });
+E.on('kill', () => { save_settings(); });
 
 
 exports = {TIMERS, SETTINGS,
