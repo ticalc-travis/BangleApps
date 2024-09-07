@@ -1,197 +1,7 @@
 const Layout = require('Layout');
 const Sched = require('sched');
-const Storage = require('Storage');
 
-
-// Data models //
-
-class PrimitiveTimer {
-  constructor(origin, rate, is_running) {
-    this.origin = origin;
-    this.rate = rate;
-
-    this._start_time = Date.now();
-    this._pause_time = is_running ? null : this._start_time;
-  }
-
-  is_running() {
-    return !this._pause_time;
-  }
-
-  start() {
-    if (!this.is_running()) {
-      this._start_time += Date.now() - this._pause_time;
-      this._pause_time = null;
-    }
-  }
-
-  pause() {
-    if (this.is_running()) {
-      this._pause_time = Date.now();
-    }
-  }
-
-  reset() {
-    this.set(this.origin);
-  }
-
-  get() {
-    const now = Date.now();
-    const elapsed =
-          (now - this._start_time)
-          - (this.is_running() ? 0 : (now - this._pause_time));
-    return this.origin + (this.rate * elapsed);
-  }
-
-  set(new_value) {
-    const now = Date.now();
-    this._start_time = (now - new_value / this.rate)
-      + (this.origin / this.rate);
-    if (!this.is_running()) {
-      this._pause_time = now;
-    }
-  }
-
-  dump() {
-    return {
-      cls: 'PrimitiveTimer',
-      version: 0,
-      origin: this.origin,
-      rate: this.rate,
-      start_time: this._start_time,
-      pause_time: this._pause_time
-    };
-  }
-
-  static load(data) {
-    if (!(data.cls == 'PrimitiveTimer' && data.version == 0)) {
-      console.error('Incompatible data type for loading PrimitiveTimer state');
-    }
-    loaded = new this(data.origin, data.rate, false);
-    loaded._start_time = data.start_time;
-    loaded._pause_time = data.pause_time;
-    return loaded;
-  }
-}
-
-
-class TriangleTimer {
-  constructor(name, primitive_timer, increment) {
-    this.name = name;
-    this.timer = primitive_timer;
-    if (increment === undefined) increment = 1;
-    this.increment = increment;
-
-    this.end_alarm = false;
-    this.outer_alarm = false;
-  }
-
-  display_name() {
-    if (this.name) {
-      return this.name;
-    } else {
-      return this.provisional_name();
-    }
-  }
-
-  provisional_name() {
-    const origin_as_tri = as_triangle(
-      this.timer.origin,
-      this.increment
-    );
-    return (this.timer.rate >= 0 ? 'U' : 'D')
-      + ' '
-      + origin_as_tri[0] + '/' + origin_as_tri[1]
-      + ' x' + this.increment;
-  }
-
-  display_status() {
-    let status = '';
-
-    // Indicate timer expired if its current value is <= 0 and it's
-    // a countdown timer
-    if (this.timer.get() <= 0 && this.timer.rate < 0) {
-      status += '!';
-    }
-
-    if (this.timer.is_running()) {
-      status += '>';
-    }
-
-    return status;
-  }
-
-  time_to_next_alarm() {
-    if (!this.timer.is_running())
-      return null;
-
-    if (this.outer_alarm) {
-      let as_tri = as_triangle(this.timer.get(), this.increment);
-      if (this.timer.rate > 0) {
-        as_tri[1] = as_tri[0] - as_tri[1];
-      }
-      return as_tri[1] / Math.abs(this.timer.rate);
-    }
-
-    if (this.end_alarm
-        && this.timer.rate <= 0
-        && this.timer.get() > 0) {
-      return this.timer.get() / Math.abs(this.timer.rate);
-    }
-
-    return null;
-  }
-
-  dump() {
-    return {
-      cls: 'TriangleTimer',
-      version: 0,
-      name: this.name,
-      timer: this.timer.dump(),
-      increment: this.increment,
-      end_alarm: this.end_alarm,
-      outer_alarm: this.outer_alarm,
-    };
-  }
-
-  static load(data) {
-    if (!(data.cls == 'TriangleTimer' && data.version == 0)) {
-      console.error('Incompatible data type for loading TriangleTimer state');
-    }
-    let new_timer = new this(
-      data.name,
-      PrimitiveTimer.load(data.timer),
-      data.increment);
-    new_timer.end_alarm = data.end_alarm;
-    new_timer.outer_alarm = data.outer_alarm;
-    return new_timer;
-  }
-}
-
-
-function fixed_ceil(value) {
-  // JavaScript sucks balls
-  return Math.ceil(Math.round(value * 1e10) / 1e10);
-}
-
-
-function as_triangle(linear_time, increment) {
-  if (increment === undefined) increment = 1;
-  linear_time = linear_time / increment;
-  const outer = fixed_ceil((Math.sqrt(linear_time * 8 + 1) - 1) / 2);
-  const inner = outer - (outer * (outer + 1) / 2 - linear_time);
-  return [outer * increment, inner * increment];
-}
-
-
-function as_linear(triangle_time, increment) {
-  if (increment === undefined) increment = 1;
-  const outer = triangle_time[0], inner = triangle_time[1];
-  return (outer + (outer - 1) % increment + 1)
-    * fixed_ceil(outer / increment) / 2
-    - outer + inner;
-}
-
+const tt = require('triangletimer');
 
 // UI //
 
@@ -208,7 +18,7 @@ class TimerView {
     this._initLayout();
     this.layout.clear();
     this.render();
-    set_last_viewed_timer(this.tri_timer);
+    tt.set_last_viewed_timer(this.tri_timer);
   }
 
   stop() {
@@ -283,7 +93,7 @@ class TimerView {
         setTimeout(() => { this.render('status'); }, 0);
         setTimeout(() => { this.render('buttons'); }, 0);
       }
-      const timer_as_tri = as_triangle(
+      const timer_as_tri = tt.as_triangle(
         timer_as_linear, this.tri_timer.increment);
 
       let label = timer_as_tri[0];
@@ -309,7 +119,7 @@ class TimerView {
     }
 
     if (!item || item == 'status') {
-      const origin_as_tri = as_triangle(
+      const origin_as_tri = tt.as_triangle(
         timer.origin,
         this.tri_timer.increment
       );
@@ -348,7 +158,7 @@ class TimerView {
     this.render('buttons');
     this.render('status');
     this.render('timer');
-    set_timers_dirty();
+    tt.set_timers_dirty();
   }
 }
 
@@ -378,18 +188,18 @@ class TimerViewMenu {
       },
       'Reset': () => { E.showMenu(reset_menu); },
       'Timers': () => {
-        switch_UI(new TimerMenu(TIMERS, this.tri_timer));
+        switch_UI(new TimerMenu(tt.TIMERS, this.tri_timer));
       },
       'Edit': this.edit_menu.bind(this),
       'Add': () => {
-        set_timers_dirty();
-        const new_timer = add_tri_timer(this.tri_timer);
+        tt.set_timers_dirty();
+        const new_timer = tt.add_tri_timer(tt.TIMERS, this.tri_timer);
         const timer_view_menu = new TimerViewMenu(new_timer);
         timer_view_menu.edit_menu();
       },
       'Delete': () => { E.showMenu(delete_menu); },
     };
-    if (TIMERS.length <= 1) {
+    if (tt.TIMERS.length <= 1) {
       // Prevent user deleting last timer
       delete top_menu.Delete;
     }
@@ -401,7 +211,7 @@ class TimerViewMenu {
       },
       'Reset': () => {
         this.tri_timer.timer.reset();
-        set_timers_dirty();
+        tt.set_timers_dirty();
         this.back();
       },
       'Cancel': () => { E.showMenu(top_menu); },
@@ -413,8 +223,8 @@ class TimerViewMenu {
         back: () => { E.showMenu(top_menu); }
       },
       'Delete': () => {
-        set_timers_dirty();
-        switch_UI(new TimerView(delete_tri_timer(this.tri_timer)));
+        tt.set_timers_dirty();
+        switch_UI(new TimerView(tt.delete_tri_timer(tt.TIMERS, this.tri_timer)));
       },
       'Cancel': () => { E.showMenu(top_menu); },
     };
@@ -433,7 +243,7 @@ class TimerViewMenu {
         format: v => (v ? 'Up' : 'Down'),
         onchange: v => {
           this.tri_timer.timer.rate = -this.tri_timer.timer.rate;
-          set_timers_dirty();
+          tt.set_timers_dirty();
         }
       },
       'Start (Tri)': this.edit_start_tri_menu.bind(this),
@@ -446,7 +256,7 @@ class TimerViewMenu {
         wrap: true,
         onchange: v => {
           this.tri_timer.increment = v;
-          set_timers_dirty();
+          tt.set_timers_dirty();
         },
       },
       'Events': this.edit_events_menu.bind(this),
@@ -456,7 +266,7 @@ class TimerViewMenu {
   }
 
   edit_start_tri_menu() {
-    let origin_tri = as_triangle(
+    let origin_tri = tt.as_triangle(
       this.tri_timer.timer.origin, this.tri_timer.increment);
 
     const edit_start_tri_menu = {
@@ -478,10 +288,10 @@ class TimerViewMenu {
           origin_tri[1] = (this.tri_timer.timer.rate >= 0) ?
             1 : origin_tri[0];
           edit_start_tri_menu.Inner.value = origin_tri[1];
-          this.tri_timer.timer.origin = as_linear(
+          this.tri_timer.timer.origin = tt.as_linear(
             origin_tri, this.tri_timer.increment
           );
-          set_timers_dirty();
+          tt.set_timers_dirty();
         }
       },
       'Inner': {
@@ -493,10 +303,10 @@ class TimerViewMenu {
         noList: true,
         onchange: v => {
           origin_tri[1] = v;
-          this.tri_timer.timer.origin = as_linear(
+          this.tri_timer.timer.origin = tt.as_linear(
             origin_tri, this.tri_timer.increment
           );
-          set_timers_dirty();
+          tt.set_timers_dirty();
         }
       },
     };
@@ -531,7 +341,7 @@ class TimerViewMenu {
         onchange: v => {
           origin_hms.h = v;
           update_origin();
-          set_timers_dirty();
+          tt.set_timers_dirty();
         }
       },
       'Minutes': {
@@ -542,7 +352,7 @@ class TimerViewMenu {
         onchange: v => {
           origin_hms.m = v;
           update_origin();
-          set_timers_dirty();
+          tt.set_timers_dirty();
         }
       },
       'Seconds': {
@@ -553,7 +363,7 @@ class TimerViewMenu {
         onchange: v => {
           origin_hms.s = v;
           update_origin();
-          set_timers_dirty();
+          tt.set_timers_dirty();
         }
       },
     };
@@ -626,168 +436,17 @@ function switch_UI(new_UI) {
   CURRENT_UI.start();
 }
 
-function set_timers_dirty() {
-  update_system_alarms();
-  schedule_save_timers();
-}
-
-function set_settings_dirty() {
-  schedule_save_settings();
-}
-
-function delete_tri_timer(tri_timer) {
-  const idx = TIMERS.indexOf(tri_timer);
-  if (idx !== -1) {
-    TIMERS.splice(idx, 1);
-  } else {
-    console.warn('delete_tri_timer: Bug? Tried to delete a timer not in list');
-  }
-  // Return another timer to switch UI to after deleting the focused
-  // one
-  return TIMERS[Math.min(idx, TIMERS.length - 1)];
-}
-
-function add_tri_timer(tri_timer) {
-  // Create a copy of current timer object
-  const new_timer = TriangleTimer.load(tri_timer.dump());
-  TIMERS.unshift(new_timer);
-  return new_timer;
-}
-
-
-function set_last_viewed_timer(tri_timer) {
-  const idx = TIMERS.indexOf(tri_timer);
-  if (idx == -1) {
-    console.warn('set_last_viewed_timer: Bug? Called with a timer not found in list');
-  } else if (idx == 0) {
-    console.debug('set_last_viewed_timer: Already set as last timer');
-  } else {
-    // Move tri_timer to top of list
-    TIMERS.splice(idx, 1);
-    TIMERS.unshift(tri_timer);
-    set_timers_dirty();
-  }
-}
-
-
-// Persistent state //
-
-const TIMERS_FILENAME = 'triangletimer.timers.json';
-const SETTINGS_FILENAME = 'triangletimer.json';
-
-const SCHEDULED_SAVE_TIMEOUT = 15000;
-
-const SETTINGS = Object.assign({
-// Global settings go here
-//  'last_viewed_timer': 0,
-}, Storage.readJSON(SETTINGS_FILENAME, true) || {});
-
-var SAVE_TIMERS_TIMEOUT = null;
-var SAVE_SETTINGS_TIMEOUT = null;
-
-function load_timers() {
-  console.log('loading timers');
-  let timers = Storage.readJSON(TIMERS_FILENAME, true) || [];
-  if (timers.length) {
-    // Deserealize timer objects
-    timers = timers.map(t => TriangleTimer.load(t));
-  } else {
-    // New configuration with one defined default timer
-    timers = [
-      new TriangleTimer(
-        '', new PrimitiveTimer(0, 0.001, false), 1
-      )
-    ];
-  }
-  return timers;
-}
-
-function save_timers(timers) {
-  console.log('saving timers');
-  timers = timers.map(t => t.dump());
-  if (!Storage.writeJSON(TIMERS_FILENAME, timers)) {
-    E.showAlert('Trouble saving timers');
-  }
-}
-
-function schedule_save_timers() {
-  if (SAVE_TIMERS_TIMEOUT === null) {
-    console.log('scheduling timer save');
-    SAVE_TIMERS_TIMEOUT = setTimeout(() => {
-      save_timers(TIMERS);
-      SAVE_TIMERS_TIMEOUT = null;
-    }, SCHEDULED_SAVE_TIMEOUT);
-  } else {
-    console.log('timer save already scheduled');
-  }
-}
-
-function save_settings(settings) {
-  console.log('saving settings');
-  if (!Storage.writeJSON(SETTINGS_FILENAME, settings)) {
-    E.showAlert('Trouble saving settings');
-  }
-}
-
-function schedule_save_settings() {
-  if (SAVE_SETTINGS_TIMEOUT === null) {
-    console.log('scheduling settings save');
-    SAVE_SETTINGS_TIMEOUT = setTimeout(() => {
-      save_settings(SETTINGS);
-      SAVE_SETTINGS_TIMEOUT = null;
-    }, SCHEDULED_SAVE_TIMEOUT);
-  } else {
-    console.log('settings save already scheduled');
-  }
-}
-
-
-// Alarm handling //
-
-function delete_system_alarms() {
-  var alarms = Sched.getAlarms().filter(a => a.appid == 'triangletimer');
-  for (let alarm of alarms) {
-    console.debug('delete sched alarm ' + alarm.id);
-    Sched.setAlarm(alarm.id, undefined);
-  }
-  Sched.reload();
-}
-
-function set_system_alarms() {
-  for (idx = 0; idx < TIMERS.length; idx++) {
-    let timer = TIMERS[idx];
-    let time_to_next_alarm = timer.time_to_next_alarm();
-    if (time_to_next_alarm !== null) {
-      console.debug('set sched alarm ' + idx + ' (' + time_to_next_alarm/1000 + ')');
-      Sched.setAlarm(idx.toString(), {
-        appid: 'triangletimer',
-        timer: time_to_next_alarm,
-        msg: timer.display_name(),
-        js: "load('triangletimer.alarm.js');",
-        data: { idx: idx },
-        del: true,
-      });
-    }
-  }
-  Sched.reload();
-}
-
-function update_system_alarms() {
-  delete_system_alarms();
-  set_system_alarms();
-}
 
 // Load and start up app //
 
 Bangle.loadWidgets();
 Bangle.drawWidgets();
 
-var TIMERS = load_timers();
 var CURRENT_UI = null;
 
-E.on('kill', () => { save_timers(TIMERS); });
-E.on('kill', () => { save_settings(SETTINGS); });
+E.on('kill', () => { tt.save_timers(); });
+E.on('kill', () => { tt.save_settings(); });
 
-update_system_alarms();
+tt.update_system_alarms();
 
-switch_UI(new TimerView(TIMERS[0]));
+switch_UI(new TimerView(tt.TIMERS[0]));
