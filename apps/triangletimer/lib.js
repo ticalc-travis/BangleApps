@@ -71,7 +71,7 @@ class PrimitiveTimer {
     loaded._pause_time = data.pause_time;
     return loaded;
   }
-};
+}
 
 
 class TriangleTimer {
@@ -83,6 +83,8 @@ class TriangleTimer {
 
     this.end_alarm = false;
     this.outer_alarm = false;
+    this.outer_action = 'Cont';
+    this.pause_checkpoint = null;
   }
 
   display_name() {
@@ -109,7 +111,7 @@ class TriangleTimer {
 
     // Indicate timer expired if its current value is <= 0 and it's
     // a countdown timer
-    if (this.timer.get() <= 0 && this.timer.rate < 0) {
+    if (this.get() <= 0 && this.timer.rate < 0) {
       status += '!';
     }
 
@@ -120,25 +122,55 @@ class TriangleTimer {
     return status;
   }
 
+  get() {
+    if (this.outer_action == 'Pause') {
+      if (this.pause_checkpoint === null) {
+        this.pause_checkpoint = this.timer.get()
+          + this.time_to_next_outer_event() * this.timer.rate;
+        console.debug('timer auto-pause setup: ' + this.pause_checkpoint);
+      } else if (
+        (this.timer.rate >= 0 && this.timer.get() >= this.pause_checkpoint)
+        || (this.timer.rate < 0 && this.timer.get() <= this.pause_checkpoint)
+      ) {
+        console.debug('timer auto-pause triggered');
+        this.timer.pause();
+        this.timer.set(this.pause_checkpoint);
+        this.pause_checkpoint = null;
+      }
+    }
+    return this.timer.get();
+  }
+
+  set(value) {
+    return this.timer.set(value);
+  }
+
   time_to_next_alarm() {
     if (!this.timer.is_running())
       return null;
 
     if (this.outer_alarm) {
-      let as_tri = as_triangle(this.timer.get(), this.increment);
-      if (this.timer.rate > 0) {
-        as_tri[1] = as_tri[0] - as_tri[1];
-      }
-      return as_tri[1] / Math.abs(this.timer.rate);
+      return this.time_to_next_outer_event();
     }
 
     if (this.end_alarm
         && this.timer.rate <= 0
-        && this.timer.get() > 0) {
-      return this.timer.get() / Math.abs(this.timer.rate);
+        && this.get() > 0) {
+      return this.get() / Math.abs(this.timer.rate);
     }
 
     return null;
+  }
+
+  time_to_next_outer_event() {
+    const as_tri = as_triangle(this.timer.get(), this.increment);
+    let inner_left = this.timer.rate > 0 ? as_tri[0] - as_tri[1] : as_tri[1];
+    // Avoid getting stuck if we're paused precisely on the event time
+    if (!inner_left) {
+      inner_left = as_tri[0] + Math.sign(this.timer.rate) * this.increment;
+    }
+    console.log(as_tri[0], as_tri[1], inner_left);
+    return Math.max(0, inner_left / Math.abs(this.timer.rate));
   }
 
   dump() {
@@ -150,6 +182,8 @@ class TriangleTimer {
       increment: this.increment,
       end_alarm: this.end_alarm,
       outer_alarm: this.outer_alarm,
+      outer_action: this.outer_action,
+      pause_checkpoint: this.pause_checkpoint,
     };
   }
 
@@ -163,9 +197,11 @@ class TriangleTimer {
       data.increment);
     new_timer.end_alarm = data.end_alarm;
     new_timer.outer_alarm = data.outer_alarm;
+    new_timer.outer_action = data.outer_action;
+    new_timer.pause_checkpoint = data.pause_checkpoint;
     return new_timer;
   }
-};
+}
 
 
 function fixed_ceil(value) {
@@ -179,7 +215,7 @@ function as_triangle(linear_time, increment) {
   const outer = fixed_ceil((Math.sqrt(linear_time * 8 + 1) - 1) / 2);
   const inner = outer - (outer * (outer + 1) / 2 - linear_time);
   return [outer * increment, inner * increment];
-};
+}
 
 
 function as_linear(triangle_time, increment) {
@@ -188,7 +224,7 @@ function as_linear(triangle_time, increment) {
   return (outer + (outer - 1) % increment + 1)
     * fixed_ceil(outer / increment) / 2
     - outer + inner;
-};
+}
 
 
 // Persistent state //
@@ -217,7 +253,7 @@ function load_timers() {
     ];
   }
   return timers;
-};
+}
 
 function save_timers() {
   console.log('saving timers');
@@ -225,7 +261,7 @@ function save_timers() {
   if (!Storage.writeJSON(TIMERS_FILENAME, dumped_timers)) {
     E.showAlert('Trouble saving timers');
   }
-};
+}
 
 function schedule_save_timers() {
   if (SAVE_TIMERS_TIMEOUT === null) {
@@ -237,14 +273,14 @@ function schedule_save_timers() {
   } else {
     console.log('timer save already scheduled');
   }
-};
+}
 
 function save_settings() {
   console.log('saving settings');
   if (!Storage.writeJSON(SETTINGS_FILENAME, SETTINGS)) {
     E.showAlert('Trouble saving settings');
   }
-};
+}
 
 function schedule_save_settings() {
   if (SAVE_SETTINGS_TIMEOUT === null) {
@@ -256,7 +292,7 @@ function schedule_save_settings() {
   } else {
     console.log('settings save already scheduled');
   }
-};
+}
 
 const SETTINGS = Object.assign({
 // Global settings go here
@@ -264,6 +300,11 @@ const SETTINGS = Object.assign({
 }, Storage.readJSON(SETTINGS_FILENAME, true) || {});
 
 var TIMERS = load_timers();
+
+const ACTIONS = [
+  'Cont',
+  'Pause',
+];
 
 
 // Persistent data convenience functions
@@ -351,9 +392,9 @@ E.on('kill', () => { save_timers(); });
 E.on('kill', () => { save_settings(); });
 
 
-exports = {TIMERS, SETTINGS,
+exports = {TIMERS, SETTINGS, ACTIONS,
            load_timers, save_timers, schedule_save_timers, save_settings, schedule_save_settings,
            PrimitiveTimer, TriangleTimer,
            as_triangle, as_linear,
            delete_tri_timer, add_tri_timer, set_last_viewed_timer, set_timers_dirty, set_settings_dirty,
-           update_system_alarms}
+           update_system_alarms};

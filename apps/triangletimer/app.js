@@ -85,7 +85,7 @@ class TimerView {
 
     if (!item || item == 'timer') {
 
-      let timer_as_linear = timer.get();
+      let timer_as_linear = this.tri_timer.get();
       if (timer_as_linear < 0) {
         // Handle countdown timer expiration
         timer_as_linear = 0;
@@ -131,11 +131,11 @@ class TimerView {
 
     if (this.timer_timeout === null
         && timer.is_running()
-        && timer.get() > 0) {
+        && this.tri_timer.get() > 0) {
       // Calculate approximate time next display update is needed.
       // The + 50 is a compensating factor due to timeouts
       // apparently sometimes triggering too early.
-      let next_tick = timer.get() % 1;
+      let next_tick = this.tri_timer.get() % 1;
       if (timer.rate > 0) {
         next_tick = 1 - next_tick;
       }
@@ -376,15 +376,22 @@ class TimerViewMenu {
         title: 'Events',
         back: () => { this.edit_menu(); }
       },
-      'End alarm': {
-        value: this.tri_timer.end_alarm,
-        format: v => (v ? 'On' : 'Off'),
-        onchange: v => { this.tri_timer.end_alarm = v; },
-      },
       'Outer alarm': {
         value: this.tri_timer.outer_alarm,
         format: v => (v ? 'On' : 'Off'),
         onchange: v => { this.tri_timer.outer_alarm = v; },
+      },
+      'Outer action': {
+        value: tt.ACTIONS.indexOf(this.tri_timer.outer_action),
+        min: 0,
+        max: tt.ACTIONS.length - 1,
+        format: v => tt.ACTIONS[v],
+        onchange: v => { this.tri_timer.outer_action = tt.ACTIONS[v]; },
+      },
+      'End alarm': {
+        value: this.tri_timer.end_alarm,
+        format: v => (v ? 'On' : 'Off'),
+        onchange: v => { this.tri_timer.end_alarm = v; },
       },
     };
 
