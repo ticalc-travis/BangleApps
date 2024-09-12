@@ -1,16 +1,45 @@
 const Storage = require('Storage');
 const Sched = require('sched');
+const Time_utils = require('time_utils');
 
 
 // Data models //
 
 class PrimitiveTimer {
-  constructor(origin, rate, is_running) {
-    this.origin = origin;
-    this.rate = rate;
+  constructor(origin, is_running, rate, name) {
+    this.origin = origin || 0;
+    // default rate +1 unit per 1000 ms, countup
+    this.rate = rate || 0.001;
+    this.name = name || '';
 
     this._start_time = Date.now();
     this._pause_time = is_running ? null : this._start_time;
+  }
+
+  display_name() {
+    return this.name ? this.name : this.provisional_name();
+  }
+
+  provisional_name() {
+    return (this.rate >= 0 ? 'U' : 'D')
+      + ' '
+      + Time_utils.formatDuration(this.origin / this.rate);
+  }
+
+  display_status() {
+    let status = '';
+
+    // Indicate timer expired if its current value is <= 0 and it's
+    // a countdown timer
+    if (this.get() <= 0 && this.rate < 0) {
+      status += '!';
+    }
+
+    if (this.is_running()) {
+      status += '>';
+    }
+
+    return status;
   }
 
   is_running() {
@@ -57,6 +86,7 @@ class PrimitiveTimer {
       version: 0,
       origin: this.origin,
       rate: this.rate,
+      name: this.name,
       start_time: this._start_time,
       pause_time: this._pause_time
     };
@@ -66,7 +96,7 @@ class PrimitiveTimer {
     if (!(data.cls == 'PrimitiveTimer' && data.version == 0)) {
       console.error('Incompatible data type for loading PrimitiveTimer state');
     }
-    loaded = new this(data.origin, data.rate, false);
+    loaded = new this(data.origin, false, data.rate, data.name);
     loaded._start_time = data.start_time;
     loaded._pause_time = data.pause_time;
     return loaded;
@@ -74,12 +104,10 @@ class PrimitiveTimer {
 }
 
 
-class TriangleTimer {
-  constructor(name, primitive_timer, increment) {
-    this.name = name;
-    this.timer = primitive_timer;
-    if (increment === undefined) increment = 1;
-    this.increment = increment;
+class TriangleTimer extends PrimitiveTimer {
+  constructor(origin, is_running, rate, name, increment) {
+    super(origin, is_running, rate, name);
+    this.increment = increment || 1;
 
     this.end_alarm = false;
     this.outer_alarm = false;
@@ -87,66 +115,40 @@ class TriangleTimer {
     this.pause_checkpoint = null;
   }
 
-  display_name() {
-    if (this.name) {
-      return this.name;
-    } else {
-      return this.provisional_name();
-    }
-  }
-
   provisional_name() {
     const origin_as_tri = as_triangle(
-      this.timer.origin,
+      this.origin,
       this.increment
     );
-    return (this.timer.rate >= 0 ? 'U' : 'D')
+    return (this.rate >= 0 ? 'U' : 'D')
       + ' '
       + origin_as_tri[0] + '/' + origin_as_tri[1]
       + ' x' + this.increment;
   }
 
-  display_status() {
-    let status = '';
-
-    // Indicate timer expired if its current value is <= 0 and it's
-    // a countdown timer
-    if (this.get() <= 0 && this.timer.rate < 0) {
-      status += '!';
-    }
-
-    if (this.timer.is_running()) {
-      status += '>';
-    }
-
-    return status;
-  }
-
   get() {
+    const current_time = super.get();
+
     if (this.outer_action == 'Pause') {
       if (this.pause_checkpoint === null) {
-        this.pause_checkpoint = this.timer.get()
-          + this.time_to_next_outer_event() * this.timer.rate;
+        this.pause_checkpoint = current_time
+          + this.time_to_next_outer_event() * this.rate;
         console.debug('timer auto-pause setup: ' + this.pause_checkpoint);
       } else if (
-        (this.timer.rate >= 0 && this.timer.get() >= this.pause_checkpoint)
-        || (this.timer.rate < 0 && this.timer.get() <= this.pause_checkpoint)
+        (this.rate >= 0 && current_time >= this.pause_checkpoint)
+        || (this.rate < 0 && current_time <= this.pause_checkpoint)
       ) {
         console.debug('timer auto-pause triggered');
-        this.timer.pause();
-        this.timer.set(this.pause_checkpoint);
+        this.pause();
+        this.set(this.pause_checkpoint);
         this.pause_checkpoint = null;
       }
     }
-    return this.timer.get();
-  }
-
-  set(value) {
-    return this.timer.set(value);
+    return current_time;
   }
 
   time_to_next_alarm() {
-    if (!this.timer.is_running())
+    if (!this.is_running())
       return null;
 
     if (this.outer_alarm) {
@@ -154,52 +156,49 @@ class TriangleTimer {
     }
 
     if (this.end_alarm
-        && this.timer.rate <= 0
+        && this.rate <= 0
         && this.get() > 0) {
-      return this.get() / Math.abs(this.timer.rate);
+      return this.get() / Math.abs(this.rate);
     }
 
     return null;
   }
 
   time_to_next_outer_event() {
-    const as_tri = as_triangle(this.timer.get(), this.increment);
-    let inner_left = this.timer.rate > 0 ? as_tri[0] - as_tri[1] : as_tri[1];
+    const as_tri = as_triangle(super.get(), this.increment);
+    let inner_left = this.rate > 0 ? as_tri[0] - as_tri[1] : as_tri[1];
     // Avoid getting stuck if we're paused precisely on the event time
     if (!inner_left) {
-      inner_left = as_tri[0] + Math.sign(this.timer.rate) * this.increment;
+      inner_left = as_tri[0] + Math.sign(this.rate) * this.increment;
     }
     console.log(as_tri[0], as_tri[1], inner_left);
-    return Math.max(0, inner_left / Math.abs(this.timer.rate));
+    return Math.max(0, inner_left / Math.abs(this.rate));
   }
 
   dump() {
-    return {
-      cls: 'TriangleTimer',
-      version: 0,
-      name: this.name,
-      timer: this.timer.dump(),
-      increment: this.increment,
-      end_alarm: this.end_alarm,
-      outer_alarm: this.outer_alarm,
-      outer_action: this.outer_action,
-      pause_checkpoint: this.pause_checkpoint,
-    };
+    data = super.dump();
+    data.cls = 'TriangleTimer';
+    data.increment = this.increment;
+    data.end_alarm = this.end_alarm;
+    data.outer_alarm = this.outer_alarm;
+    data.outer_action = this.outer_action;
+    data.pause_checkpoint = this.pause_checkpoint;
+    return data;
   }
 
   static load(data) {
     if (!(data.cls == 'TriangleTimer' && data.version == 0)) {
       console.error('Incompatible data type for loading TriangleTimer state');
     }
-    let new_timer = new this(
-      data.name,
-      PrimitiveTimer.load(data.timer),
-      data.increment);
-    new_timer.end_alarm = data.end_alarm;
-    new_timer.outer_alarm = data.outer_alarm;
-    new_timer.outer_action = data.outer_action;
-    new_timer.pause_checkpoint = data.pause_checkpoint;
-    return new_timer;
+    let loaded = new this(
+      data.origin, false, data.rate, data.name, data.increment);
+    loaded._start_time = data.start_time;
+    loaded._pause_time = data.pause_time;
+    loaded.end_alarm = data.end_alarm;
+    loaded.outer_alarm = data.outer_alarm;
+    loaded.outer_action = data.outer_action;
+    loaded.pause_checkpoint = data.pause_checkpoint;
+    return loaded;
   }
 }
 
@@ -245,12 +244,7 @@ function load_timers() {
     // Deserealize timer objects
     timers = timers.map(t => TriangleTimer.load(t));
   } else {
-    // New configuration with one defined default timer
-    timers = [
-      new TriangleTimer(
-        '', new PrimitiveTimer(0, 0.001, false), 1
-      )
-    ];
+    timers = [new TriangleTimer()];
   }
   return timers;
 }

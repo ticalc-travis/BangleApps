@@ -75,7 +75,6 @@ class TimerView {
   }
 
   render(item) {
-    const timer = this.tri_timer.timer;
     console.debug('render called: ' + item);
 
     if (!item) {
@@ -113,13 +112,13 @@ class TimerView {
 
     if (!item || item == 'buttons') {
       this.layout.start_btn.label =
-        timer.is_running() ? 'Pause' : 'Start';
+        this.tri_timer.is_running() ? 'Pause' : 'Start';
       this.layout.render(this.layout.buttons);
     }
 
     if (!item || item == 'status') {
       const origin_as_tri = tt.as_triangle(
-        timer.origin,
+        this.tri_timer.origin,
         this.tri_timer.increment
       );
       this.layout.row3.label =
@@ -130,16 +129,16 @@ class TimerView {
     }
 
     if (this.timer_timeout === null
-        && timer.is_running()
+        && this.tri_timer.is_running()
         && this.tri_timer.get() > 0) {
       // Calculate approximate time next display update is needed.
       // The + 50 is a compensating factor due to timeouts
       // apparently sometimes triggering too early.
       let next_tick = this.tri_timer.get() % 1;
-      if (timer.rate > 0) {
+      if (this.tri_timer.rate > 0) {
         next_tick = 1 - next_tick;
       }
-      next_tick = next_tick / Math.abs(timer.rate) + 50;
+      next_tick = next_tick / Math.abs(this.tri_timer.rate) + 50;
 
       this.timer_timeout = setTimeout(
         () => { this.timer_timeout = null; this.render('timer'); },
@@ -149,10 +148,10 @@ class TimerView {
   }
 
   start_stop_timer() {
-    if (this.tri_timer.timer.is_running()) {
-      this.tri_timer.timer.pause();
+    if (this.tri_timer.is_running()) {
+      this.tri_timer.pause();
     } else {
-      this.tri_timer.timer.start();
+      this.tri_timer.start();
     }
     this.render('buttons');
     this.render('status');
@@ -209,7 +208,7 @@ class TimerViewMenu {
         back: () => { E.showMenu(top_menu); }
       },
       'Reset': () => {
-        this.tri_timer.timer.reset();
+        this.tri_timer.reset();
         tt.set_timers_dirty();
         this.back();
       },
@@ -238,10 +237,10 @@ class TimerViewMenu {
         back: () => { this.top_menu(); },
       },
       'Direction': {
-        value: this.tri_timer.timer.rate >= 0,
+        value: this.tri_timer.rate >= 0,
         format: v => (v ? 'Up' : 'Down'),
         onchange: v => {
-          this.tri_timer.timer.rate = -this.tri_timer.timer.rate;
+          this.tri_timer.rate = -this.tri_timer.rate;
           tt.set_timers_dirty();
         }
       },
@@ -266,7 +265,7 @@ class TimerViewMenu {
 
   edit_start_tri_menu() {
     let origin_tri = tt.as_triangle(
-      this.tri_timer.timer.origin, this.tri_timer.increment);
+      this.tri_timer.origin, this.tri_timer.increment);
 
     const edit_start_tri_menu = {
       '': {
@@ -284,10 +283,10 @@ class TimerViewMenu {
         onchange: v => {
           origin_tri[0] = v;
           edit_start_tri_menu.Inner.max = origin_tri[0];
-          origin_tri[1] = (this.tri_timer.timer.rate >= 0) ?
+          origin_tri[1] = (this.tri_timer.rate >= 0) ?
             1 : origin_tri[0];
           edit_start_tri_menu.Inner.value = origin_tri[1];
-          this.tri_timer.timer.origin = tt.as_linear(
+          this.tri_timer.origin = tt.as_linear(
             origin_tri, this.tri_timer.increment
           );
           tt.set_timers_dirty();
@@ -302,7 +301,7 @@ class TimerViewMenu {
         noList: true,
         onchange: v => {
           origin_tri[1] = v;
-          this.tri_timer.timer.origin = tt.as_linear(
+          this.tri_timer.origin = tt.as_linear(
             origin_tri, this.tri_timer.increment
           );
           tt.set_timers_dirty();
@@ -314,15 +313,14 @@ class TimerViewMenu {
   }
 
   edit_start_hms_menu() {
-    const timer = this.tri_timer.timer;
     let origin_hms = {
-      h: Math.floor(timer.origin / 3600),
-      m: Math.floor(timer.origin / 60) % 60,
-      s: Math.floor(timer.origin % 60),
+      h: Math.floor(this.tri_timer.origin / 3600),
+      m: Math.floor(this.tri_timer.origin / 60) % 60,
+      s: Math.floor(this.tri_timer.origin % 60),
     };
 
     function update_origin() {
-      timer.origin = origin_hms.h * 3600
+      this.tri_timer.origin = origin_hms.h * 3600
         + origin_hms.m * 60
         + origin_hms.s;
     }
