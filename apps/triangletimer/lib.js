@@ -136,13 +136,13 @@ class TriangleTimer extends PrimitiveTimer {
     this.emit('status');
   }
 
-  get() {
+  _check_auto_pause() {
     const current_time = super.get();
 
     if (this.outer_action == 'Pause') {
       if (this.pause_checkpoint === null) {
         this.pause_checkpoint = current_time
-          + this.time_to_next_outer_event() * this.rate;
+          + this._time_to_next_outer_event() * this.rate;
         console.debug('timer auto-pause setup: ' + this.pause_checkpoint);
       } else if (
         (this.rate >= 0 && current_time >= this.pause_checkpoint)
@@ -154,15 +154,21 @@ class TriangleTimer extends PrimitiveTimer {
         this.pause_checkpoint = null;
       }
     }
-    return current_time;
+  }
+
+  get() {
+    this._check_auto_pause();
+    return super.get();
   }
 
   time_to_next_alarm() {
+    this._check_auto_pause();
+
     if (!this.is_running())
       return null;
 
     if (this.outer_alarm) {
-      return this.time_to_next_outer_event();
+      return this._time_to_next_outer_event();
     }
 
     if (this.end_alarm
@@ -174,7 +180,7 @@ class TriangleTimer extends PrimitiveTimer {
     return null;
   }
 
-  time_to_next_outer_event() {
+  _time_to_next_outer_event() {
     const as_tri = as_triangle(super.get(), this.increment);
     let inner_left = this.rate > 0 ? as_tri[0] - as_tri[1] : as_tri[1];
     // Avoid getting stuck if we're paused precisely on the event time
