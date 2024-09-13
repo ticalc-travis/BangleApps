@@ -156,9 +156,19 @@ class TriangleTimer extends PrimitiveTimer {
     }
   }
 
+  reset() {
+    this.pause_checkpoint = null;
+    return super.reset();
+  }
+
   get() {
     this._check_auto_pause();
     return super.get();
+  }
+
+  set(new_value) {
+    this.pause_checkpoint = null;
+    return super.set(new_value);
   }
 
   time_to_next_alarm() {
