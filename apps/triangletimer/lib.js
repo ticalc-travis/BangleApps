@@ -126,6 +126,16 @@ class TriangleTimer extends PrimitiveTimer {
       + ' x' + this.increment;
   }
 
+  start() {
+    super.start();
+    this.emit('status');
+  }
+
+  pause() {
+    super.pause();
+    this.emit('status');
+  }
+
   get() {
     const current_time = super.get();
 

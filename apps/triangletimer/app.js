@@ -18,6 +18,9 @@ class TimerView {
     this.layout.clear();
     this.render();
     tt.set_last_viewed_timer(this.tri_timer);
+    let render_status = () => { this.render(); };
+    this.tri_timer.on('status', render_status);
+    this.listeners.status = render_status;
   }
 
   stop() {
@@ -25,6 +28,7 @@ class TimerView {
       clearTimeout(this.timer_timeout);
       this.timer_timeout = null;
     }
+    this.tri_timer.removeListener('status', this.listeners.status);
     Bangle.setUI();
   }
 
@@ -79,7 +83,6 @@ class TimerView {
 
     if (!item) {
       this.layout.update();
-      this.layout.clear();
     }
 
     if (!item || item == 'timer') {
@@ -89,7 +92,6 @@ class TimerView {
         // Handle countdown timer expiration
         timer_as_linear = 0;
         setTimeout(() => { this.render('status'); }, 0);
-        setTimeout(() => { this.render('buttons'); }, 0);
       }
       const timer_as_tri = tt.as_triangle(
         timer_as_linear, this.tri_timer.increment);
@@ -110,13 +112,11 @@ class TimerView {
 
     }
 
-    if (!item || item == 'buttons') {
+    if (!item || item == 'status') {
       this.layout.start_btn.label =
         this.tri_timer.is_running() ? 'Pause' : 'Start';
       this.layout.render(this.layout.buttons);
-    }
 
-    if (!item || item == 'status') {
       const origin_as_tri = tt.as_triangle(
         this.tri_timer.origin,
         this.tri_timer.increment
@@ -153,9 +153,6 @@ class TimerView {
     } else {
       this.tri_timer.start();
     }
-    this.render('buttons');
-    this.render('status');
-    this.render('timer');
     tt.set_timers_dirty();
   }
 }
