@@ -374,19 +374,28 @@ class TimerViewMenu {
       'Outer alarm': {
         value: this.tri_timer.outer_alarm,
         format: v => (v ? 'On' : 'Off'),
-        onchange: v => { this.tri_timer.outer_alarm = v; },
+        onchange: v => {
+          this.tri_timer.outer_alarm = v;
+          tt.set_timers_dirty();
+        },
       },
       'Outer action': {
         value: tt.ACTIONS.indexOf(this.tri_timer.outer_action),
         min: 0,
         max: tt.ACTIONS.length - 1,
         format: v => tt.ACTIONS[v],
-        onchange: v => { this.tri_timer.outer_action = tt.ACTIONS[v]; },
+        onchange: v => {
+          this.tri_timer.outer_action = tt.ACTIONS[v];
+          tt.set_timers_dirty();
+        },
       },
       'End alarm': {
         value: this.tri_timer.end_alarm,
         format: v => (v ? 'On' : 'Off'),
-        onchange: v => { this.tri_timer.end_alarm = v; },
+        onchange: v => {
+          this.tri_timer.end_alarm = v;
+          tt.set_timers_dirty();
+        },
       },
     };
 
