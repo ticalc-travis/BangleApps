@@ -234,6 +234,7 @@ function fixed_ceil(value) {
   return Math.ceil(Math.round(value * 1e10) / 1e10);
 }
 
+
 function as_triangle(linear_time, increment) {
   if (increment === undefined) increment = 1;
   linear_time = linear_time / increment;
@@ -242,13 +243,18 @@ function as_triangle(linear_time, increment) {
   return [outer * increment, inner * increment];
 }
 
-
 function as_linear(triangle_time, increment) {
   if (increment === undefined) increment = 1;
   const outer = triangle_time[0], inner = triangle_time[1];
   return (outer + (outer - 1) % increment + 1)
     * fixed_ceil(outer / increment) / 2
     - outer + inner;
+}
+
+
+function format_triangle(tri_timer) {
+  const tri = as_triangle(tri_timer.get(), tri_timer.increment);
+  return tri[0] + '/' + Math.ceil(tri[1]);
 }
 
 
@@ -395,7 +401,6 @@ function set_system_alarms() {
         msg: timer.display_name(),
         js: "load('triangletimer.alarm.js');",
         data: { idx: idx },
-        del: true,
       });
     }
   }
@@ -415,6 +420,6 @@ E.on('kill', () => { save_settings(); });
 exports = {TIMERS, SETTINGS, ACTIONS,
            load_timers, save_timers, schedule_save_timers, save_settings, schedule_save_settings,
            PrimitiveTimer, TriangleTimer,
-           as_triangle, as_linear,
+           as_triangle, as_linear, format_triangle,
            delete_tri_timer, add_tri_timer, set_last_viewed_timer, set_timers_dirty, set_settings_dirty,
            update_system_alarms};
