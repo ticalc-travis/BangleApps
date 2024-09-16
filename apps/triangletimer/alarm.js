@@ -35,7 +35,8 @@ function showAlarm(alarm) {
       Bangle.setLocked(false);
     }
 
-    const pattern = alarm.vibrate || (alarm.timer ? settings.defaultTimerPattern : settings.defaultAlarmPattern);
+    const pattern = tri_timer.vibrate_pattern || settings.defaultTimerPattern;
+    console.log('buzz: ' + pattern);
     require("buzz").pattern(pattern).then(() => {
       if (buzzCount == null || buzzCount--) {
         setTimeout(buzz, settings.buzzIntervalMillis);

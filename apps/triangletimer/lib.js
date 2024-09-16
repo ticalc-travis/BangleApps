@@ -113,6 +113,7 @@ class TriangleTimer extends PrimitiveTimer {
     this.outer_alarm = false;
     this.outer_action = 'Cont';
     this.pause_checkpoint = null;
+    this.vibrate_pattern = null;
   }
 
   provisional_name() {
@@ -209,6 +210,7 @@ class TriangleTimer extends PrimitiveTimer {
     data.outer_alarm = this.outer_alarm;
     data.outer_action = this.outer_action;
     data.pause_checkpoint = this.pause_checkpoint;
+    data.vibrate_pattern = this.vibrate_pattern;
     return data;
   }
 
@@ -224,6 +226,7 @@ class TriangleTimer extends PrimitiveTimer {
     loaded.outer_alarm = data.outer_alarm;
     loaded.outer_action = data.outer_action;
     loaded.pause_checkpoint = data.pause_checkpoint;
+    loaded.vibrate_pattern = data.vibrate_pattern;
     return loaded;
   }
 }

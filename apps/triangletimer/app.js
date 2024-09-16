@@ -397,6 +397,9 @@ class TimerViewMenu {
           tt.set_timers_dirty();
         },
       },
+      'Vibrate pattern': require("buzz_menu").pattern(
+        this.tri_timer.vibrate_pattern,
+        v => this.tri_timer.vibrate_pattern = v),
     };
 
     E.showMenu(events_menu);

@@ -15,6 +15,7 @@
     {"name": "triangletimer.img", "url": "app-icon.js", "evaluate": true}
   ],
   "data": [
-    {"name": "triangletimer.json"}
+    {"name": "triangletimer.json"},
+    {"name": "triangletimer.timers.json"}
   ]
 }
