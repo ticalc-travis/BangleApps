@@ -316,11 +316,11 @@ class TimerViewMenu {
       s: Math.floor(this.tri_timer.origin % 60),
     };
 
-    function update_origin() {
+    const update_origin = () => {
       this.tri_timer.origin = origin_hms.h * 3600
         + origin_hms.m * 60
         + origin_hms.s;
-    }
+    };
 
     const edit_start_hms_menu = {
       '': {
