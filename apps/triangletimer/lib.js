@@ -135,14 +135,14 @@ class TriangleTimer extends PrimitiveTimer {
 
   pause() {
     super.pause();
-    this.refresh();             // causing hang, somehow
     this.emit('status');
   }
 
   _check_auto_pause() {
     const current_time = super.get();
 
-    if (this.outer_action == 'Pause') {
+    if (this.is_running() &&
+        this.outer_action == 'Pause') {
       if (this.pause_checkpoint === null) {
         this.pause_checkpoint = current_time
           + this._time_to_next_outer_event() * this.rate;
