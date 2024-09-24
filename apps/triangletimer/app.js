@@ -42,14 +42,14 @@ class TimerView {
             type: 'txt',
             id: 'row1',
             label: '88:88:88',
-            font: 'Vector:35x56',
+            font: 'Vector:35x42',
             fillx: 1,
           },
           {
             type: 'txt',
             id: 'row2',
             label: '88:88:88',
-            font: 'Vector:35x42',
+            font: 'Vector:35x56',
             fillx: 1,
           },
           {
