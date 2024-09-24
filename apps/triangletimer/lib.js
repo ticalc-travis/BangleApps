@@ -204,7 +204,7 @@ class TriangleTimer extends PrimitiveTimer {
     if (!inner_left) {
       inner_left = as_tri[0] + Math.sign(this.rate) * this.increment;
     }
-    console.log(as_tri[0], as_tri[1], inner_left);
+    console.debug('next outer event', as_tri[0], as_tri[1], inner_left);
     return Math.max(0, inner_left / Math.abs(this.rate));
   }
 
