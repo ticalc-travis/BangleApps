@@ -129,11 +129,13 @@ class TriangleTimer extends PrimitiveTimer {
 
   start() {
     super.start();
+    this.refresh();
     this.emit('status');
   }
 
   pause() {
     super.pause();
+    this.refresh();             // causing hang, somehow
     this.emit('status');
   }
 
@@ -158,7 +160,7 @@ class TriangleTimer extends PrimitiveTimer {
   }
 
   reset() {
-    this.pause_checkpoint = null;
+    this.refresh();
     return super.reset();
   }
 
@@ -168,8 +170,12 @@ class TriangleTimer extends PrimitiveTimer {
   }
 
   set(new_value) {
-    this.pause_checkpoint = null;
+    this.refresh();
     return super.set(new_value);
+  }
+
+  refresh() {
+    this.pause_checkpoint = null;
   }
 
   time_to_next_alarm() {

@@ -231,7 +231,7 @@ class TimerViewMenu {
     const edit_menu = {
       '': {
         title: 'Edit: ' + this.tri_timer.display_name(),
-        back: () => { this.top_menu(); },
+        back: () => { this.tri_timer.refresh(); this.top_menu(); },
       },
       'Direction': {
         value: this.tri_timer.rate >= 0,
