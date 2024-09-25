@@ -129,7 +129,6 @@ class TriangleTimer extends PrimitiveTimer {
 
   start() {
     super.start();
-    this.refresh();
     this.emit('status');
   }
 
@@ -138,7 +137,7 @@ class TriangleTimer extends PrimitiveTimer {
     this.emit('status');
   }
 
-  _check_auto_pause() {
+  check_auto_pause() {
     const current_time = super.get();
 
     if (this.is_running() &&
@@ -156,31 +155,24 @@ class TriangleTimer extends PrimitiveTimer {
         this.set(this.pause_checkpoint);
         this.pause_checkpoint = null;
       }
+    } else {
+      this.pause_checkpoint = null;
     }
   }
 
   reset() {
-    this.refresh();
     return super.reset();
   }
 
   get() {
-    this._check_auto_pause();
     return super.get();
   }
 
   set(new_value) {
-    this.refresh();
     return super.set(new_value);
   }
 
-  refresh() {
-    this.pause_checkpoint = null;
-  }
-
   time_to_next_alarm() {
-    this._check_auto_pause();
-
     if (!this.is_running())
       return null;
 
@@ -401,6 +393,7 @@ function delete_system_alarms() {
 function set_system_alarms() {
   for (idx = 0; idx < TIMERS.length; idx++) {
     let timer = TIMERS[idx];
+    timer.check_auto_pause();
     let time_to_next_alarm = timer.time_to_next_alarm();
     if (time_to_next_alarm !== null) {
       console.debug('set sched alarm ' + idx + ' (' + time_to_next_alarm/1000 + ')');
