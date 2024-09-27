@@ -259,6 +259,17 @@ function format_triangle(tri_timer) {
 }
 
 
+function format_duration(msec, have_seconds) {
+  const time = Time_utils.decodeTime(msec);
+  time.h += time.d * 24;
+  let str = time.h + ":" + ("0" + time.m).substr(-2);
+  if (have_seconds) {
+    str += ":" + ("0" + time.s).substr(-2);
+  }
+  return str;
+}
+
+
 // Persistent state //
 
 const TIMERS_FILENAME = 'triangletimer.timers.json';
@@ -322,8 +333,7 @@ function schedule_save_settings() {
 }
 
 const SETTINGS = Object.assign({
-// Global settings go here
-//  'last_viewed_timer': 0,
+  'view_mode': 0,
 }, Storage.readJSON(SETTINGS_FILENAME, true) || {});
 
 var TIMERS = load_timers();
@@ -422,6 +432,6 @@ E.on('kill', () => { save_settings(); });
 exports = {TIMERS, SETTINGS, ACTIONS,
            load_timers, save_timers, schedule_save_timers, save_settings, schedule_save_settings,
            PrimitiveTimer, TriangleTimer,
-           as_triangle, as_linear, format_triangle,
+           as_triangle, as_linear, format_triangle, format_duration,
            delete_tri_timer, add_tri_timer, set_last_viewed_timer, set_timers_dirty, set_settings_dirty,
            update_system_alarms};

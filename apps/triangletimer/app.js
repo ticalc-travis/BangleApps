@@ -21,6 +21,24 @@ class TimerView {
     let render_status = () => { this.render(); };
     this.tri_timer.on('status', render_status);
     this.listeners.status = render_status;
+
+    // Touch handler
+    function touchHandler(button, xy) {
+      for (id of ['row1', 'row2', 'row3']) {
+        const elem = this.layout[id];
+        if (!xy.type &&
+            elem.x <= xy.x && xy.x < elem.x + elem.w &&
+            elem.y <= xy.y && xy.y < elem.y + elem.h) {
+          Bangle.buzz(50, .5);
+          tt.SETTINGS.view_mode = (tt.SETTINGS.view_mode + 1) % 3;
+          tt.schedule_save_settings();
+          setTimeout(this.render.bind(this), 0);
+          break;
+        }
+      }
+    }
+    this.listeners.touch = touchHandler.bind(this);
+    Bangle.on('touch', this.listeners.touch);
   }
 
   stop() {
@@ -29,6 +47,7 @@ class TimerView {
       this.timer_timeout = null;
     }
     this.tri_timer.removeListener('status', this.listeners.status);
+    Bangle.removeListener('touch', this.listeners.touch);
     Bangle.setUI();
   }
 
@@ -41,21 +60,21 @@ class TimerView {
           {
             type: 'txt',
             id: 'row1',
-            label: '88:88:88',
-            font: 'Vector:35x42',
+            label: '8888',
+            font: 'Vector:56x42',
             fillx: 1,
           },
           {
             type: 'txt',
             id: 'row2',
-            label: '88:88:88',
-            font: 'Vector:35x56',
+            label: '8888',
+            font: 'Vector:56x56',
             fillx: 1,
           },
           {
             type: 'txt',
             id: 'row3',
-            label: '88:88:88',
+            label: '',
             font: '12x20',
             fillx: 1,
           },
@@ -97,16 +116,39 @@ class TimerView {
       const timer_as_tri = tt.as_triangle(
         timer_as_linear, this.tri_timer.increment);
 
-      let label = timer_as_tri[0];
-      if (label != this.layout.row1.label) {
-        this.layout.row1.label = label;
+      var label1, label2, font1, font2;
+      if (tt.SETTINGS.view_mode == 0) {
+        label1 = timer_as_tri[0];
+        label2 = Math.ceil(timer_as_tri[1]);
+        font1 = 'Vector:56x42';
+        font2 = 'Vector:56x56';
+      } else if (tt.SETTINGS.view_mode == 1) {
+        label1 = timer_as_tri[0];
+        label2 = Math.ceil(timer_as_tri[0] - timer_as_tri[1]);
+        font1 = 'Vector:56x42';
+        font2 = 'Vector:56x56';
+      } else if (tt.SETTINGS.view_mode == 2) {
+        label1 = tt.format_triangle(this.tri_timer);
+        let ttna = this.tri_timer.time_to_next_alarm()
+        if (ttna !== null) {
+          label2 = tt.format_duration(ttna, true);
+        } else {
+          label2 = "--:--:--";
+        }
+        font1 = 'Vector:34x42';
+        font2 = 'Vector:34x56';
+      }
+
+      if (label1 !== this.layout.row1.label) {
+        this.layout.row1.label = label1;
+        this.layout.row1.font = font1;
         this.layout.clear(this.layout.row1);
         this.layout.render(this.layout.row1);
       }
 
-      label = timer_as_tri[1];
-      if (label != this.layout.row2.label) {
-        this.layout.row2.label = Math.ceil(timer_as_tri[1]);
+      if (label2 !== this.layout.row2.label) {
+        this.layout.row2.label = label2;
+        this.layout.row2.font = font2;
         this.layout.clear(this.layout.row2);
         this.layout.render(this.layout.row2);
       }
