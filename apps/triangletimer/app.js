@@ -24,12 +24,12 @@ class TimerView {
 
     // Touch handler
     function touchHandler(button, xy) {
-      for (id of ['row1', 'row2', 'row3']) {
+      for (var id of ['row1', 'row2', 'row3']) {
         const elem = this.layout[id];
         if (!xy.type &&
             elem.x <= xy.x && xy.x < elem.x + elem.w &&
             elem.y <= xy.y && xy.y < elem.y + elem.h) {
-          Bangle.buzz(50, .5);
+          Bangle.buzz(50, 0.5);
           tt.SETTINGS.view_mode = (tt.SETTINGS.view_mode + 1) % 3;
           tt.schedule_save_settings();
           setTimeout(this.render.bind(this), 0);
@@ -129,7 +129,7 @@ class TimerView {
         font2 = 'Vector:56x56';
       } else if (tt.SETTINGS.view_mode == 2) {
         label1 = tt.format_triangle(this.tri_timer);
-        let ttna = this.tri_timer.time_to_next_alarm()
+        let ttna = this.tri_timer.time_to_next_alarm();
         if (ttna !== null) {
           label2 = tt.format_duration(ttna, true);
         } else {
