@@ -39,6 +39,13 @@ class TimerView {
     }
     this.listeners.touch = touchHandler.bind(this);
     Bangle.on('touch', this.listeners.touch);
+
+    // Physical button handler
+    this.listeners.button = setWatch(
+      this.start_stop_timer.bind(this),
+      BTN,
+      {edge: 'falling', debounce: 50, repeat: true}
+    );
   }
 
   stop() {
@@ -48,6 +55,7 @@ class TimerView {
     }
     this.tri_timer.removeListener('status', this.listeners.status);
     Bangle.removeListener('touch', this.listeners.touch);
+    clearWatch(this.listeners.button);
     Bangle.setUI();
   }
 
