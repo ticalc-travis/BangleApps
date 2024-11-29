@@ -143,7 +143,7 @@ class TimerView {
         } else {
           label2 = "--:--:--";
         }
-        font1 = 'Vector:34x42';
+        font1 = 'Vector:30x42';
         font2 = 'Vector:34x56';
       }
 
