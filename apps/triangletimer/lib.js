@@ -154,6 +154,7 @@ class TriangleTimer extends PrimitiveTimer {
         this.pause();
         this.set(this.pause_checkpoint);
         this.pause_checkpoint = null;
+        this.emit('auto-pause');
       }
     } else {
       this.pause_checkpoint = null;

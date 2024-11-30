@@ -20,6 +20,7 @@ class TimerView {
     tt.set_last_viewed_timer(this.tri_timer);
     let render_status = () => { this.render(); };
     this.tri_timer.on('status', render_status);
+    this.tri_timer.on('auto-pause', tt.set_timers_dirty);
     this.listeners.status = render_status;
 
     // Touch handler
