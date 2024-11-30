@@ -138,7 +138,7 @@ class TimerView {
         font2 = 'Vector:56x56';
       } else if (tt.SETTINGS.view_mode == 2) {
         label1 = tt.format_triangle(this.tri_timer);
-        let ttna = this.tri_timer.time_to_next_alarm();
+        let ttna = this.tri_timer.time_to_next_event();
         if (ttna !== null) {
           label2 = tt.format_duration(ttna, true);
         } else {
