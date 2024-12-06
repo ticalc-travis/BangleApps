@@ -31,7 +31,7 @@ class TimerView {
             elem.x <= xy.x && xy.x < elem.x + elem.w &&
             elem.y <= xy.y && xy.y < elem.y + elem.h) {
           Bangle.buzz(50, 0.5);
-          tt.SETTINGS.view_mode = (tt.SETTINGS.view_mode + 1) % 3;
+          tt.SETTINGS.view_mode = (tt.SETTINGS.view_mode + 1) % 4;
           tt.schedule_save_settings();
           setTimeout(this.render.bind(this), 0);
           break;
@@ -142,10 +142,20 @@ class TimerView {
         if (ttna !== null) {
           label2 = tt.format_duration(ttna, true);
         } else {
-          label2 = "--:--:--";
+          label2 = '--:--:--';
         }
         font1 = 'Vector:30x42';
         font2 = 'Vector:34x56';
+      } else if (tt.SETTINGS.view_mode == 3) {
+        label1 = timer_as_tri[0];
+        let ttna = this.tri_timer.time_to_next_event();
+        if (ttna !== null) {
+          label2 = tt.format_duration(ttna, false);
+        } else {
+          label2 = '--:--';
+        }
+        font1 = 'Vector:56x42';
+        font2 = 'Vector:48x56';
       }
 
       if (label1 !== this.layout.row1.label) {
@@ -180,18 +190,31 @@ class TimerView {
       this.layout.render(this.layout.row3);
     }
 
-    if (this.timer_timeout === null
-        && this.tri_timer.is_running()
-        && this.tri_timer.get() > 0) {
+    if (this.tri_timer.is_running() && this.tri_timer.get() > 0) {
+      if (this.timer_timeout) {
+        clearTimeout(this.timer_timeout);
+        this.timer_timeout = null;
+      }
+
       // Calculate approximate time next display update is needed.
-      // The + 50 is a compensating factor due to timeouts
-      // apparently sometimes triggering too early.
+      // Usual case: update when numbers change once per second.
       let next_tick = this.tri_timer.get() % 1;
       if (this.tri_timer.rate > 0) {
         next_tick = 1 - next_tick;
       }
+      // Convert next_tick from seconds to milliseconds and add
+      // compensating factor of 50ms due to timeouts apparently
+      // sometimes triggering too early.
       next_tick = next_tick / Math.abs(this.tri_timer.rate) + 50;
 
+      // For slow-update view mode, only update about every 60
+      // seconds instead of every second
+      if (tt.SETTINGS.view_mode == 3) {
+        console.debug(this.tri_timer.time_to_next_event());
+        next_tick = this.tri_timer.time_to_next_event() % 60000;
+      }
+
+      console.debug('Next render update scheduled in ' + next_tick);
       this.timer_timeout = setTimeout(
         () => { this.timer_timeout = null; this.render('timer'); },
         next_tick
