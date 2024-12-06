@@ -399,7 +399,7 @@ function set_last_viewed_timer(tri_timer) {
 }
 
 function set_timers_dirty() {
-  update_system_alarms();
+  setTimeout(update_system_alarms, 500);
   schedule_save_timers();
 }
 
