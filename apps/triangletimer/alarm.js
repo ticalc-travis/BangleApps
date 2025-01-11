@@ -1,7 +1,6 @@
 const tt = require('triangletimer');
 
 function showAlarm(alarm) {
-  const alarmIndex = alarms.indexOf(alarm);
   const settings = require("sched").getSettings();
   const tri_timer = tt.TIMERS[alarm.data.idx];
   const message =  tt.format_triangle(tri_timer) + '\n' + alarm.msg;

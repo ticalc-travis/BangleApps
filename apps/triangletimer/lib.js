@@ -96,7 +96,7 @@ class PrimitiveTimer {
     if (!(data.cls == 'PrimitiveTimer' && data.version == 0)) {
       console.error('Incompatible data type for loading PrimitiveTimer state');
     }
-    loaded = new this(data.origin, false, data.rate, data.name);
+    let loaded = new this(data.origin, false, data.rate, data.name);
     loaded._start_time = data.start_time;
     loaded._pause_time = data.pause_time;
     return loaded;
@@ -220,7 +220,7 @@ class TriangleTimer extends PrimitiveTimer {
   }
 
   dump() {
-    data = super.dump();
+    let data = super.dump();
     data.cls = 'TriangleTimer';
     data.increment = this.increment;
     data.end_alarm = this.end_alarm;
@@ -420,7 +420,7 @@ function delete_system_alarms() {
 }
 
 function set_system_alarms() {
-  for (idx = 0; idx < TIMERS.length; idx++) {
+  for (let idx = 0; idx < TIMERS.length; idx++) {
     let timer = TIMERS[idx];
     timer.check_auto_pause();
     let time_to_next_alarm = timer.time_to_next_alarm();

@@ -179,10 +179,6 @@ class TimerView {
         this.tri_timer.is_running() ? 'Pause' : 'Start';
       this.layout.render(this.layout.buttons);
 
-      const origin_as_tri = tt.as_triangle(
-        this.tri_timer.origin,
-        this.tri_timer.increment
-      );
       this.layout.row3.label =
         this.tri_timer.display_status()
         + ' ' + this.tri_timer.provisional_name();
