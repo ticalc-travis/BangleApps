@@ -162,6 +162,7 @@ class TriangleTimer extends PrimitiveTimer {
   }
 
   reset() {
+    this.pause_checkpoint = null;
     return super.reset();
   }
 
