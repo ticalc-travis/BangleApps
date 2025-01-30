@@ -8,7 +8,8 @@ function showAlarm(alarm) {
   Bangle.loadWidgets();
   Bangle.drawWidgets();
 
-  let buzzCount = settings.buzzCount;
+  // buzzCount should really be called buzzRepeat, so subtract 1
+  let buzzCount = tri_timer.buzz_count - 1;
 
   tt.update_system_alarms();
 
@@ -36,11 +37,13 @@ function showAlarm(alarm) {
 
     const pattern = tri_timer.vibrate_pattern || settings.defaultTimerPattern;
     console.log('buzz: ' + pattern);
+    console.log('buzzCount: ' + buzzCount);
     require("buzz").pattern(pattern).then(() => {
       if (buzzCount == null || buzzCount--) {
         setTimeout(buzz, settings.buzzIntervalMillis);
       } else if (alarm.as) { // auto-snooze
-        buzzCount = settings.buzzCount;
+        // buzzCount should really be called buzzRepeat, so subtract 1
+        buzzCount = tri_timer.buzz_count - 1;
         setTimeout(buzz, settings.defaultSnoozeMillis);
       }
     });

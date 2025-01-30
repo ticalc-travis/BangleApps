@@ -471,6 +471,18 @@ class TimerViewMenu {
       'Vibrate pattern': require("buzz_menu").pattern(
         this.tri_timer.vibrate_pattern,
         v => this.tri_timer.vibrate_pattern = v),
+      'Buzz count': {
+        value: this.tri_timer.buzz_count,
+        min: 0,
+        max: 15,
+        step: 1,
+        wrap: true,
+        format: v => v === 0 ? "Forever" : v,
+        onchange: v => {
+          this.tri_timer.buzz_count = v;
+          tt.set_timers_dirty();
+        },
+      },
     };
 
     E.showMenu(events_menu);
