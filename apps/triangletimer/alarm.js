@@ -3,7 +3,6 @@ const tt = require('triangletimer');
 function showAlarm(alarm) {
   const settings = require("sched").getSettings();
   const tri_timer = tt.TIMERS[alarm.data.idx];
-  const message =  tt.format_triangle(tri_timer) + '\n' + alarm.msg;
 
   Bangle.loadWidgets();
   Bangle.drawWidgets();
@@ -12,6 +11,7 @@ function showAlarm(alarm) {
   let buzzCount = tri_timer.buzz_count - 1;
 
   tt.update_system_alarms();
+  const message =  tt.format_triangle(tri_timer) + '\n' + alarm.msg;
 
   E.showPrompt(message, {
     title: 'Triangle timer',
