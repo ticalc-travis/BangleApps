@@ -105,9 +105,11 @@ class PrimitiveTimer {
 
 
 class TriangleTimer extends PrimitiveTimer {
-  constructor(origin, is_running, rate, name, increment) {
+  constructor(origin, is_running, rate, name, increment,
+              outer_event_increment) {
     super(origin, is_running, rate, name);
     this.increment = increment || 1;
+    this.outer_event_increment = outer_event_increment || 1;
 
     this.end_alarm = false;
     this.outer_alarm = false;
@@ -201,17 +203,40 @@ class TriangleTimer extends PrimitiveTimer {
       next = this.time_to_end_event();
     }
 
-    return next
+    return next;
   }
 
   time_to_next_outer_event() {
-    const as_tri = as_triangle(super.get(), this.increment);
-    let inner_left = this.rate > 0 ? as_tri[0] - as_tri[1] : as_tri[1];
-    // Avoid getting stuck if we're paused precisely on the event time
-    if (!inner_left) {
-      inner_left = as_tri[0] + Math.sign(this.rate) * this.increment;
+    // The next outer event is the next time the timer outer value
+    // passes a multiple of the outer_event_increment.
+
+    const curr_linear = super.get();
+    print('curr_linear>> ' + curr_linear);
+    const curr_as_tri = as_triangle(curr_linear, this.increment);
+    var next_linear;
+    if (this.rate > 0) {
+      // countup
+      let next_outer = Math.ceil(curr_as_tri[0] / this.outer_event_increment)
+        * this.outer_event_increment;
+      print('next_outer>> ' + next_outer);
+      // Find the multiple of this.increment that is >= next_outer
+      next_outer = Math.ceil(next_outer / this.increment) * this.increment;
+      print('next_outer>> ' + next_outer);
+      next_linear = as_linear([next_outer, next_outer], this.increment) - curr_linear;
+
+    } else {
+      // countdown
+      let next_outer = Math.floor((curr_as_tri[0] - this.increment) / this.outer_event_increment)
+        * this.outer_event_increment;
+      print('next_outer>> ' + next_outer);
+      // Find the multiple of this.increment that is <= next_outer
+      next_outer = Math.floor(next_outer / this.increment) * this.increment;
+      print('next_outer>> ' + next_outer);
+      next_linear = curr_linear - as_linear([next_outer, next_outer], this.increment);
     }
-    return Math.max(0, inner_left / Math.abs(this.rate));
+
+    print('next_linear>> ' + next_linear);
+    return Math.max(0, next_linear / Math.abs(this.rate));
   }
 
   time_to_end_event() {
@@ -225,6 +250,7 @@ class TriangleTimer extends PrimitiveTimer {
     let data = super.dump();
     data.cls = 'TriangleTimer';
     data.increment = this.increment;
+    data.outer_event_increment = this.outer_event_increment;
     data.end_alarm = this.end_alarm;
     data.outer_alarm = this.outer_alarm;
     data.outer_action = this.outer_action;
@@ -239,7 +265,8 @@ class TriangleTimer extends PrimitiveTimer {
       console.error('Incompatible data type for loading TriangleTimer state');
     }
     let loaded = new this(
-      data.origin, false, data.rate, data.name, data.increment);
+      data.origin, false, data.rate, data.name, data.increment,
+      data.outer_event_increment);
     loaded._start_time = data.start_time;
     loaded._pause_time = data.pause_time;
     loaded.end_alarm = data.end_alarm;

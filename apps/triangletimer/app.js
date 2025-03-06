@@ -442,6 +442,18 @@ class TimerViewMenu {
         title: 'Events',
         back: () => { this.edit_menu(); }
       },
+      'Outer interval': {
+        value: this.tri_timer.outer_event_increment,
+        min: 0,
+        max: 9999,
+        step: 1,
+        wrap: true,
+        noList: true,
+        onchange: v => {
+          this.tri_timer.outer_event_increment = v;
+          tt.set_timers_dirty();
+        }
+      },
       'Outer alarm': {
         value: this.tri_timer.outer_alarm,
         format: v => (v ? 'On' : 'Off'),
