@@ -181,7 +181,7 @@ class TimerView {
 
       this.layout.row3.label =
         this.tri_timer.display_status()
-        + ' ' + this.tri_timer.provisional_name();
+        + ' ' + this.tri_timer.display_name();
       this.layout.clear(this.layout.row3);
       this.layout.render(this.layout.row3);
     }
@@ -299,10 +299,25 @@ class TimerViewMenu {
   }
 
   edit_menu() {
+    let keyboard = null;
+    try { keyboard = require('textinput'); } catch (e) {}
+
     const edit_menu = {
       '': {
         title: 'Edit: ' + this.tri_timer.display_name(),
         back: () => { this.top_menu(); },
+      },
+      'Name': {
+        value: this.tri_timer.name,
+        onchange: () => {
+          setTimeout(() => {
+            keyboard.input({text:this.tri_timer.name}).then(text => {
+              this.tri_timer.name = text;
+              tt.set_timers_dirty();
+              setTimeout(() => { this.edit_menu(); }, 0);
+            });
+          }, 100);
+        }
       },
       'Direction': {
         value: this.tri_timer.rate >= 0,
@@ -327,6 +342,10 @@ class TimerViewMenu {
       },
       'Events': this.edit_events_menu.bind(this),
     };
+
+    if (!keyboard) {
+      delete edit_menu.Name;
+    }
 
     E.showMenu(edit_menu);
   }
