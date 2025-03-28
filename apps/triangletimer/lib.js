@@ -239,6 +239,17 @@ class TriangleTimer extends PrimitiveTimer {
     return Math.max(0, next_linear / Math.abs(this.rate));
   }
 
+  time_to_next_outer() {
+    // Return the time until the outer timer value changes
+    const temp_increment = this.outer_event_increment;
+    try {
+      this.outer_event_increment = 1;
+      return this.time_to_next_outer_event();
+    } finally {
+      this.outer_event_increment = temp_increment;
+    }
+  }
+
   time_to_end_event() {
     if (this.rate <= 0 && this.get() > 0) {
       return this.get() / Math.abs(this.rate);

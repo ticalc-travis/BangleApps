@@ -204,10 +204,12 @@ class TimerView {
       next_tick = next_tick / Math.abs(this.tri_timer.rate) + 50;
 
       // For slow-update view mode, only update about every 60
-      // seconds instead of every second
+      // seconds, or each time outer value changes, whichever happens
+      // first
       if (tt.SETTINGS.view_mode == 3) {
-        console.debug(this.tri_timer.time_to_next_event());
+        let next_outer = this.tri_timer.time_to_next_outer();
         next_tick = this.tri_timer.time_to_next_event() % 60000;
+        next_tick = Math.min(next_tick, next_outer);
       }
 
       console.debug('Next render update scheduled in ' + next_tick);
