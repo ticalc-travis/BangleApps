@@ -5,13 +5,6 @@ module.exports = {
       "no-unused-vars"
     ]
   },
-  "apps/waternet/app.js": {
-    "hash": "a03fbfc731811f8cc9ea8c96781ff7fe46532c5f9e628b317892069e43b97012",
-    "rules": [
-      "no-unused-vars",
-      "no-undef"
-    ]
-  },
   "apps/tabata/tabata.js": {
     "hash": "bba68fd35b57afe00adb054d598d8bde74cf2c9cb1d1d7ae27c17e13899383ee",
     "rules": [
@@ -112,12 +105,6 @@ module.exports = {
       "no-unused-vars"
     ]
   },
-  "apps/kbtouch/lib.js": {
-    "hash": "725b41b792a0f9879257e61cc5c2ba30df777c21137bd2d2e324ab83be7b8012",
-    "rules": [
-      "no-unused-vars"
-    ]
-  },
   "apps/jbm8b_IT/app.js": {
     "hash": "52df7b9bcac876176d66cbb65f7015cb0b5933ba585a6e3f6b93766bbe19fb11",
     "rules": [
@@ -126,12 +113,6 @@ module.exports = {
   },
   "apps/jbm8b/app.js": {
     "hash": "7ec45c7d21590f8fa9167f4953fa6da40190d0f287f436dac7a2c4b62d82d429",
-    "rules": [
-      "no-unused-vars"
-    ]
-  },
-  "apps/wristlight/app.js": {
-    "hash": "7400a20766b3f3cd837c29ce09c8dbb5bca19a854392fd2b907d7ac058888e2f",
     "rules": [
       "no-unused-vars"
     ]
@@ -218,12 +199,6 @@ module.exports = {
   },
   "apps/qmsched/app.js": {
     "hash": "4b7dbabed6c252021531d6b0449c16a3adc2e405f2ddda33ca0a65f5fa42c663",
-    "rules": [
-      "no-unused-vars"
-    ]
-  },
-  "apps/powermanager/boot.js": {
-    "hash": "662d9d29a80a4f2c2855097b4073a099604f4f6d444c13a33304346c788cc5cb",
     "rules": [
       "no-unused-vars"
     ]
@@ -643,12 +618,6 @@ module.exports = {
       "no-undef"
     ]
   },
-  "apps/pomoplus/common.js": {
-    "hash": "52d7d91b6e5107158b78e5707d6a078490a9a09569669ea8f7c2eb88461b1004",
-    "rules": [
-      "no-undef"
-    ]
-  },
   "apps/pomodo/pomodoro.js": {
     "hash": "7321de537188d707844da5150e36c6d83db53d95226cc4ec275a6f62988df38e",
     "rules": [
@@ -925,12 +894,6 @@ module.exports = {
       "no-undef"
     ]
   },
-  "apps/fileman/fileman.app.js": {
-    "hash": "f378179e7dd3655ba7e9ce03e1f7fd5a2d1768ad7d9083b22e7d740405be842a",
-    "rules": [
-      "no-undef"
-    ]
-  },
   "apps/flappy/app.js": {
     "hash": "e24b0c5e0469070e02dae00887bf50569c2c141a80c7c356b36987ddf68ce9cc",
     "rules": [
@@ -1047,12 +1010,6 @@ module.exports = {
   },
   "apps/approxclock/app.js": {
     "hash": "675ce5f16bb26649a39c86561e9fa46bb31e369a465fac9b35e5debfe18672ec",
-    "rules": [
-      "no-undef"
-    ]
-  },
-  "apps/altimeter/app.js": {
-    "hash": "054ac328db51034aa339f1d10b4d264badd49438b95f08bc6fbfb90bd88c6ae0",
     "rules": [
       "no-undef"
     ]

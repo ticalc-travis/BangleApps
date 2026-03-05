@@ -16,7 +16,7 @@ if (window.location.host=="banglejs.com") {
     'This is not the official Bangle.js App Loader - you can try the <a href="https://banglejs.com/apps/">Official Version</a> here.';
 }
 
-var RECOMMENDED_VERSION = "2v25";
+var RECOMMENDED_VERSION = "2v29";
 // could check http://www.espruino.com/json/BANGLEJS.json for this
 
 // We're only interested in Bangles
@@ -143,6 +143,12 @@ function setSavedDeviceId(deviceId) {
 
 // At boot, show a window to choose which type of device you have...
 window.addEventListener('load', (event) => {
+  if (window.location.search) {
+    let searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has("dev_id")) // dev_id=BANGLEJS2 for example, to stop the popup
+      setSavedDeviceId(searchParams.get("dev_id"));
+  }
+
   let deviceId = getSavedDeviceId()
   if (deviceId !== undefined) return; // already chosen
 
@@ -212,7 +218,7 @@ window.addEventListener('load', (event) => {
   el = document.getElementById("reinstallall");
   if (el) el.addEventListener("click",event=>{
     var promise =  showPrompt("Reinstall","Really re-install all apps?").then(() => {
-      Comms.reset().then(_ =>
+      startOperation({name:"Reinstall All Apps"}, () => Comms.reset().then(_ =>
         getInstalledApps()
       ).then(installedapps => {
         console.log(installedapps);
@@ -224,7 +230,7 @@ window.addEventListener('load', (event) => {
           app = appJSON.find(a => a.id==oldApp.id);
           if (!app)
             return console.log(`Ignoring ${oldApp.id} as not found`);
-          promise = promise.then(() => updateApp(app, {noReset:true, noFinish:true}));
+          promise = promise.then(() => updateApp(app, {noReset:true, noFinish:true, noNewOperation: true}));
         });
         return promise;
       }).then( _ =>
@@ -232,14 +238,14 @@ window.addEventListener('load', (event) => {
       ).catch(err=>{
         Progress.hide({sticky:true});
         showToast("App re-install failed, "+err,"error");
-      });
+      }));
     });
   });
 
   // Button to install all default apps in one go
   el = document.getElementById("installdefault");
   if (el) el.addEventListener("click", event=>{
-    getInstalledApps().then(() => {
+    startOperation({name:"Install Default Apps"}, () => getInstalledApps().then(() => {
       if (device.id == "BANGLEJS")
         return httpGet("defaultapps_banglejs1.json");
       if (device.id == "BANGLEJS2")
@@ -250,15 +256,16 @@ window.addEventListener('load', (event) => {
     }).catch(err=>{
       Progress.hide({sticky:true});
       showToast("App Install failed, "+err,"error");
-    });
+    }));
   });
 
   // Button to reset the Bangle's settings
   el = document.getElementById("defaultbanglesettings");
   if (el) el.addEventListener("click", event=>{
     showPrompt("Reset Settings","Really reset Bangle.js settings?").then(() => {
-      Comms.write("\x10require('Storage').erase('setting.json');load()\n");
-      showToast("Settings reset!", "success");
+      startOperation({name:"Reset Settings"}, () =>
+        Comms.write("\x10require('Storage').erase('setting.json');load()\n").then(() =>
+          showToast("Settings reset!", "success")));
     }, function() { /* cancelled */ });
   });
 

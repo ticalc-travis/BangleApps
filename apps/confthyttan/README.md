@@ -1,6 +1,6 @@
 # Thyttan's Default Config
 
-A different default set of apps and configurations. Brings many quality of life improvements. Opinionated based on the creators taste. Read more below before installing.
+A different default set of apps and configurations. Makes many quality of life changes. Opinionated based on the creators taste. Read more below before installing.
 
 ## Usage
 
@@ -21,6 +21,10 @@ On the clock face:
 - Swipe down for quick access to music and podcast controls.
   - (Do a subsequent left or right swipe to enter the listed apps)
 - (Check out the "Quick Launch" app readme for more info)
+
+Miscellaneous:
+- The bluetooth indicator will be hidden when connected, visible if not (`widbt_notify`).
+- Messages can be scrolled by a twist of the arm (if they were auto-displayed).
 
 ## Requests
 
