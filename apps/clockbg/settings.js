@@ -9,7 +9,7 @@
       delete settings.fn;
     if (settings.style!="color")
       delete settings.color;
-    if (!["randomcolor","squares","plasma","rings","tris"].includes(settings.style))
+    if (!["randomcolor","squares","plasma","rings","tris","blobs"].includes(settings.style))
       delete settings.colors;
     require("Storage").writeJSON("clockbg.json", settings);
   }
@@ -198,6 +198,33 @@
         cols.forEach(col => {
           menu[getColorsImage(col)] = () => {
             settings.style = "tris";
+            settings.colors = col;
+            saveSettings();
+            showMainMenu();
+          };
+        });
+        E.showMenu(menu);
+      },
+      /*LANG*/"Blobs" : function() {
+        var cols = [ // 2/4/8/16 (8/16 both use 4bpp)
+          ["#fff","#f9f","#90f","#40f"],
+          ["#fff","#ff0","#f00","#800"],
+          ["#fff","#8ff","#08f","#00f"],
+          ["#f00","#f60","#fc0","#ff0"],
+          ["#0f0","#0f6","#0fc","#0ff"],
+          ["#00f","#26f","#4cf","#6ff"]
+          // Please add some more!
+        ];
+        var menu =  {"":{title:/*LANG*/"Colors", back:showModeMenu},
+        /*LANG*/"Blobs" : () => {
+          settings.style = "blobs";
+          settings.colors = cols; // all colours!
+          saveSettings();
+          showMainMenu();
+        }};
+        cols.forEach(col => {
+          menu[getColorsImage(col)] = () => {
+            settings.style = "blobs";
             settings.colors = col;
             saveSettings();
             showMainMenu();
