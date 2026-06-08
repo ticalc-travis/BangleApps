@@ -3,10 +3,11 @@
   "shortName":"BBClock",
   "icon": "app.png",
   "version": "1.00",
+  "author": "PastaRhythm",
   "description": "A fully featured watch face with a playable game on the side.",
   "readme":"README.md",
   "type": "clock",
-  "tags": "clock, game",
+  "tags": "clock,game",
   "supports" : ["BANGLEJS2"],
   "storage": [
     {"name":"bblobface.app.js","url":"app.js"},

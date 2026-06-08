@@ -3,8 +3,8 @@
 
   function loadSettings() {
     let settings = require('Storage').readJSON("messages.settings.json", true) || {};
-    if (settings.vibrate===undefined) settings.vibrate=":";
-    if (settings.vibrateCalls===undefined) settings.vibrateCalls=":";
+    if (settings.vibrate===undefined) settings.vibrate="=";
+    if (settings.vibrateCalls===undefined) settings.vibrateCalls="=";
     if (settings.repeat===undefined) settings.repeat=4;
     if (settings.repeatCalls===undefined) settings.repeatCalls=settings.repeat;
     if (settings.vibrateTimeout===undefined) settings.vibrateTimeout=60;
@@ -12,6 +12,7 @@
     if (settings.maxMessages===undefined) settings.maxMessages=3;
     if (settings.iconColorMode === undefined) settings.iconColorMode = iconColorModes[0];
     if (settings.ignoreUnread === undefined) settings.ignoreUnread = 0;
+    if (settings.autoOpen === undefined) settings.autoOpen = 1;
     settings.unlockWatch=!!settings.unlockWatch;
     settings.openMusic=!!settings.openMusic;
     settings.maxUnreadTimeout=240;
@@ -60,8 +61,8 @@
       onchange: v => updateSetting("fontSize", v)
     },
     /*LANG*/'Auto-Open Unread Msg': {
-      value: !!settings.ignoreUnread,
-      onchange: v => updateSetting("ignoreUnread", v)
+      value: !settings.ignoreUnread,
+      onchange: v => updateSetting("ignoreUnread", !v)
     },
     /*LANG*/'Auto-Open Music': {
       value: !!settings.openMusic,
@@ -79,15 +80,21 @@
       value: !!settings.quietNoAutOpn,
       onchange: v => updateSetting("quietNoAutOpn", v)
     },
-    /*LANG*/'Disable auto-open': {
-      value: !!settings.noAutOpn,
-      onchange: v => updateSetting("noAutOpn", v)
+    /*LANG*/'Auto-open new msg': {
+      value: settings.autoOpen&3,
+      min:0,max:3,step:1,
+      format: v=>["Never","On clock","If locked","Always"][v],
+      onchange: v => updateSetting("autoOpen", v)
     },
     /*LANG*/'Widget messages': {
       value:0|settings.maxMessages,
       min: 0, max: 5,
       format: v => v ? v :/*LANG*/"Hide",
       onchange: v => updateSetting("maxMessages", v)
+    },
+    /*LANG*/'Show Widgets': {
+      value: !!settings.showWidgets,
+      onchange: v => updateSetting("showWidgets", v)
     },
     /*LANG*/'Icon color mode': {
       value: Math.max(0,iconColorModes.indexOf(settings.iconColorMode)),

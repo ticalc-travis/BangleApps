@@ -1,6 +1,6 @@
 (function(back) {
   var FILE = "dtlaunch.json";
-  
+
   var settings = Object.assign({
     showClocks: true,
     showLaunchers: true,
@@ -25,6 +25,7 @@
       onchange: v => {
         settings.showClocks = v;
         writeSettings();
+        require("launch_utils").clearCache();
       }
     },
     /*LANG*/'Show launchers': {
@@ -32,6 +33,7 @@
       onchange: v => {
         settings.showLaunchers = v;
         writeSettings();
+        require("launch_utils").clearCache();
       }
     },
     /*LANG*/'Direct launch': {

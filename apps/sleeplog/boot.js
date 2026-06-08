@@ -11,11 +11,31 @@ global.sleeplog = {
     // threshold settings
     maxAwake: 36E5, //  [ms] maximal awake time to count for consecutive sleep
     minConsec: 18E5, // [ms] minimal time to count for consecutive sleep
-    deepTh: 100, //     threshold for deep sleep
-    lightTh: 200, //    threshold for light sleep
-    wearTemp: 19.5, //    temperature threshold to count as worn
+    deepTh: 150, //     threshold for deep sleep
+    lightTh: 300, //    threshold for light sleep
+    wearTemp: 19.5,
+    hrmDeepTh: 60,
+    hrmLightTh: 74,
+    sleepMode: 0
   }, require("Storage").readJSON("sleeplog.json", true) || {})
 };
+
+// --- MIGRATION LOGIC (Added in v0.26) ---
+// Catch users who updated from <=v0.25 but haven't opened the settings app yet.
+// Translates the old boolean preference to the new sleepMode in RAM.
+// WHY: In v0.25 and earlier, the HRM setting was a simple boolean called 'preferHRM'.
+// In v0.26, this was replaced by a 3-state 'sleepMode' (0=Movement, 1=HRM, 2=Both).
+// WHAT: This block silently migrates existing users who haven't opened the settings page, yet
+// to the new format, ensuring they don't lose their preference and the app doesn't crash.
+// REMOVAL: This block can be safely removed in a future major update (e.g., v1.0 or 
+// after ~1 year), once we can assume all active users have updated past v0.25.
+// CONSEQUENCE: If removed, users updating directly from <=v0.25 to that future version 
+// will simply lose their old 'preferHRM' preference and default to sleepMode 0.
+if ("preferHRM" in global.sleeplog.conf) {
+  global.sleeplog.conf.sleepMode = global.sleeplog.conf.preferHRM ? 1 : 0;
+  delete global.sleeplog.conf.preferHRM; // clean up RAM
+}
+// ---------------------------------------
 
 // check if service is enabled
 if (global.sleeplog.conf.enabled) {
@@ -25,7 +45,7 @@ if (global.sleeplog.conf.enabled) {
     start: function() {
       // add kill and health listener
       E.on('kill', global.sleeplog.saveStatus);
-      Bangle.on('health', global.sleeplog.health);
+      Bangle.prependListener('health', global.sleeplog.health);
 
       // restore saved status
       this.restoreStatus();
@@ -149,20 +169,34 @@ if (global.sleeplog.conf.enabled) {
     // define health listener function
     // - called by event listener: "this"-reference points to global
     health: function(data) {
+      print("Sleep Log - Health Data Acquired");
       // check if global variable accessable
       if (!global.sleeplog) return new Error("sleeplog: Can't process health event, global object missing!");
-
       // check if movement is available
-      if (!data.movement) return;
-
+      if (!data.movement&&!data.bpm) return;
       // add timestamp rounded to 10min, corrected to 10min ago
       data.timestamp = data.timestamp || ((Date.now() / 6E5 | 0) - 1) * 6E5;
-
-      // add preliminary status depending on charging and movement thresholds
+      // add preliminary status depending on charging, movement, and HRM thresholds
       // 1 = not worn, 2 = awake, 3 = light sleep, 4 = deep sleep
-      data.status = Bangle.isCharging() ? 1 :
-        data.movement <= global.sleeplog.conf.deepTh ? 4 :
-        data.movement <= global.sleeplog.conf.lightTh ? 3 : 2;
+      var conf = global.sleeplog.conf;
+      if (Bangle.isCharging()) {
+        data.status = 1;
+      } else {
+        // Calculate theoretical status for both sensors independently
+        var hStatus = data.bpm ? (data.bpm <= conf.hrmDeepTh ? 4 : (data.bpm <= conf.hrmLightTh ? 3 : 2)) : 0;
+        var mStatus = data.movement <= conf.deepTh ? 4 : (data.movement <= conf.lightTh ? 3 : 2);
+
+        if (conf.sleepMode === 1 && data.bpm) {
+          // 1: HRM only (Fallback to movement if HRM fails)
+          data.status = hStatus;
+        } else if (conf.sleepMode === 2 && data.bpm) {
+          // 2: Require Both (The "more awake" sensor wins)
+          data.status = Math.min(hStatus, mStatus);
+        } else {
+          // 0: Movement only (or fallback if HRM fails in mode 1/2)
+          data.status = mStatus;
+        }
+      }
 
       // check if changing to deep sleep from non sleeping
       if (data.status === 4 && global.sleeplog.status <= 2) {
@@ -176,6 +210,9 @@ if (global.sleeplog.conf.enabled) {
         // set status
         global.sleeplog.setStatus(data);
       }
+      // update activity in the 'health' event for when it's logged/sent to Gadgetbridge
+      if (data.status==3) data.activity="LIGHT_SLEEP";
+      if (data.status==4) data.activity="DEEP_SLEEP";
     },
 
     // check wearing status either based on HRM or temperature as set in settings

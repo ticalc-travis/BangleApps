@@ -7,13 +7,20 @@
       drawBell: false,
       padHours: true,
       showSeconds: 0, // 0=never, 1=only when display is unlocked, 2=for less than a minute
-      font: 1, // 0=segment style font, 1=teletext font, 2=6x8:1x2
+      font: 1, // 0=segment style font, 1=teletext font, 2=6x8:1x2, 3=VGA8
+      whenToShow: false, // false=always, true=only on clock
     }, require("Storage").readJSON("widalarmeta.json",1) || {});
 
-      if (config.font == 0) {
+      if (config.font == 0 || config.font == 5) {
         require("Font5x9Numeric7Seg").add(Graphics);
       } else if (config.font == 1) {
         require("FontTeletext5x9Ascii").add(Graphics);
+      } else if (config.font == 2) {
+        require("Font6x8").add(Graphics);
+      } else if (config.font == 3) {
+        require("FontVGA8").add(Graphics);
+      } else if (config.font == 4) {
+        require("Font5x7Numeric7Seg").add(Graphics);
       }
   }
   loadSettings();
@@ -38,6 +45,13 @@
   } // getNextAlarm
 
   function draw(_w, fromInterval) {
+
+    // If only show on clock and not on clock
+    if (config.whenToShow && !Bangle.CLOCK) {
+      this.nextAlarm = undefined; // make sure to reload later
+      return;
+    }
+
     if (this.nextAlarm === undefined) {
       let alarm = getNextAlarm();
       if (alarm === undefined) {
@@ -55,13 +69,14 @@
     let calcWidth = 0;
     let drawSeconds = false;
 
+    // Determine text and width
     if (next > 0 && next <= config.maxhours*60*60*1000) {
       const hours = Math.floor((next-1) / 3600000).toString();
       const minutes = Math.floor(((next-1) % 3600000) / 60000).toString();
       const seconds = Math.floor(((next-1) % 60000) / 1000).toString();
       drawSeconds = (config.showSeconds & 0b01 && !Bangle.isLocked()) || (config.showSeconds & 0b10 && next <= 1000*60);
 
-      g.reset(); // reset the graphics context to defaults (color/font/etc)
+      g.reset("widget"); // reset the graphics context to defaults (color/font/etc)
       g.setFontAlign(-1,0); // center font in y direction
       g.clearRect(this.x, this.y, this.x+this.width-1, this.y+23);
 
@@ -71,17 +86,22 @@
       } else {
         text += hours;
       }
-      text += ":" + minutes.padStart(2, '0');
+      text += (config.font == 3 ? "\n" : ":") + minutes.padStart(2, '0');
       if (drawSeconds) {
-        text += ":" + seconds.padStart(2, '0');
+        text += (config.font == 3 ? "\n" : ":") + seconds.padStart(2, '0');
       }
       if (config.font == 0) {
         g.setFont("5x9Numeric7Seg:1x2");
       } else if (config.font == 1) {
         g.setFont("Teletext5x9Ascii:1x2");
-      } else {
-        // Default to this if no other font is set.
+      } else if (config.font == 2) {
         g.setFont("6x8:1x2");
+      } else if (config.font == 3) {
+        g.setFont("VGA8");
+      } else if (config.font == 4) {
+        g.setFont("5x7Numeric7Seg:2x2");
+      } else if (config.font == 5) {
+        g.setFont("5x9Numeric7Seg:2x2");
       }
       g.drawString(text, this.x+1, this.y+12);
 
@@ -91,7 +111,7 @@
       calcWidth = 24;
       // next alarm too far in future, draw only widalarm bell
       if (this.bellVisible !== true || fromInterval !== true) {
-        g.reset().drawImage(atob("GBgBAAAAAAAAABgADhhwDDwwGP8YGf+YMf+MM//MM//MA//AA//AA//AA//AA//AA//AB//gD//wD//wAAAAADwAABgAAAAAAAAA"),this.x,this.y);
+        g.reset("widget").drawImage(atob("GBgBAAAAAAAAABgADhhwDDwwGP8YGf+YMf+MM//MM//MA//AA//AA//AA//AA//AA//AB//gD//wD//wAAAAADwAABgAAAAAAAAA"),this.x,this.y);
         this.bellVisible = true;
       }
     }
@@ -133,5 +153,7 @@
     };
 
     Bangle.on("alarmReload", () => WIDGETS["widalarmeta"].reload());
+    Bangle.on("lock", () => WIDGETS["widalarmeta"].draw(WIDGETS["widalarmeta"]))
+    Bangle.on("lcdPower", () => WIDGETS["widalarmeta"].draw(WIDGETS["widalarmeta"]))
   }
 })();

@@ -5,13 +5,6 @@ module.exports = {
       "no-unused-vars"
     ]
   },
-  "apps/waternet/app.js": {
-    "hash": "a03fbfc731811f8cc9ea8c96781ff7fe46532c5f9e628b317892069e43b97012",
-    "rules": [
-      "no-unused-vars",
-      "no-undef"
-    ]
-  },
   "apps/tabata/tabata.js": {
     "hash": "bba68fd35b57afe00adb054d598d8bde74cf2c9cb1d1d7ae27c17e13899383ee",
     "rules": [
@@ -112,12 +105,6 @@ module.exports = {
       "no-unused-vars"
     ]
   },
-  "apps/kbtouch/lib.js": {
-    "hash": "725b41b792a0f9879257e61cc5c2ba30df777c21137bd2d2e324ab83be7b8012",
-    "rules": [
-      "no-unused-vars"
-    ]
-  },
   "apps/jbm8b_IT/app.js": {
     "hash": "52df7b9bcac876176d66cbb65f7015cb0b5933ba585a6e3f6b93766bbe19fb11",
     "rules": [
@@ -126,12 +113,6 @@ module.exports = {
   },
   "apps/jbm8b/app.js": {
     "hash": "7ec45c7d21590f8fa9167f4953fa6da40190d0f287f436dac7a2c4b62d82d429",
-    "rules": [
-      "no-unused-vars"
-    ]
-  },
-  "apps/wristlight/app.js": {
-    "hash": "7400a20766b3f3cd837c29ce09c8dbb5bca19a854392fd2b907d7ac058888e2f",
     "rules": [
       "no-unused-vars"
     ]
@@ -218,12 +199,6 @@ module.exports = {
   },
   "apps/qmsched/app.js": {
     "hash": "4b7dbabed6c252021531d6b0449c16a3adc2e405f2ddda33ca0a65f5fa42c663",
-    "rules": [
-      "no-unused-vars"
-    ]
-  },
-  "apps/powermanager/boot.js": {
-    "hash": "662d9d29a80a4f2c2855097b4073a099604f4f6d444c13a33304346c788cc5cb",
     "rules": [
       "no-unused-vars"
     ]
@@ -322,24 +297,11 @@ module.exports = {
       "no-unused-vars"
     ]
   },
-  "apps/gbmusic/app.js": {
-    "hash": "c36e9ccf6813264000732cf8aae5b16bb63afafb3bdc81f6f98d670c008b3416",
-    "rules": [
-      "no-unused-vars",
-      "no-undef"
-    ]
-  },
   "apps/gbdebug/app.js": {
     "hash": "5372409dd09a1b165b009afc7dc9af24d4be223ffc6507a3f6e1cbb694a3eeec",
     "rules": [
       "no-unused-vars",
       "no-undef"
-    ]
-  },
-  "apps/gallery/app.js": {
-    "hash": "81b119cc61c9d1ae76071f7ef05580f4f93ac60bf97fbdfe418463817e045402",
-    "rules": [
-      "no-unused-vars"
     ]
   },
   "apps/football/app.js": {
@@ -368,18 +330,6 @@ module.exports = {
   },
   "apps/devstopwatch/app.js": {
     "hash": "28ca59e605f280a2d8fd4a74f553783205d51f8bb7042d6f51cf8ec11d44c264",
-    "rules": [
-      "no-unused-vars"
-    ]
-  },
-  "apps/coretemp/settings.js": {
-    "hash": "b5aa84ecab587b444028b4491b2c2e8f3b2303aa33745265ab629c6ff5141cfb",
-    "rules": [
-      "no-unused-vars"
-    ]
-  },
-  "apps/coretemp/boot.js": {
-    "hash": "02ee3a04d7dc485367394a91e570affd712ab919bbb155bdafc00e534d3bcd4a",
     "rules": [
       "no-unused-vars"
     ]
@@ -488,12 +438,6 @@ module.exports = {
       "no-undef"
     ]
   },
-  "apps/warpdrive/app.js": {
-    "hash": "c2f9113c4d298a3021ec4bc0bc5f5d1bcd88267b4fa2acc03ae17d6447ed7d00",
-    "rules": [
-      "no-undef"
-    ]
-  },
   "apps/usgs/settings.js": {
     "hash": "00ee672a6920f5667bfbd2988fd2853cfd579895a843ae036a00028dcb13878d",
     "rules": [
@@ -508,12 +452,6 @@ module.exports = {
   },
   "apps/timerclk/timer.alert.js": {
     "hash": "319b1e8779325199fa17136da5dc486786d9e05255ab917e8d65255405cb619f",
-    "rules": [
-      "no-undef"
-    ]
-  },
-  "apps/timecal/timecal.app.js": {
-    "hash": "9ad04daff299db71901a07d2d1d5116e273287041e9c342c3cd7a4b67db12936",
     "rules": [
       "no-undef"
     ]
@@ -632,12 +570,6 @@ module.exports = {
       "no-undef"
     ]
   },
-  "apps/rescalc/app.js": {
-    "hash": "925f00a439817fadf92f4e7a7fcd509eb9d9c7e1e4309e315ea92a6881e18b4b",
-    "rules": [
-      "no-undef"
-    ]
-  },
   "apps/regattatimer/app.js": {
     "hash": "8d579cc62d82599f776e5e230651f03481f18c3934f35f4fedfb6382a46db861",
     "rules": [
@@ -676,12 +608,6 @@ module.exports = {
   },
   "apps/presentation_timer/presentation_timer.app.js": {
     "hash": "edb5e46a495bbe65843ec29c079eb401458439b2c5642a713e5d4a7fa80a0bcb",
-    "rules": [
-      "no-undef"
-    ]
-  },
-  "apps/pomoplus/common.js": {
-    "hash": "52d7d91b6e5107158b78e5707d6a078490a9a09569669ea8f7c2eb88461b1004",
     "rules": [
       "no-undef"
     ]
@@ -760,12 +686,6 @@ module.exports = {
   },
   "apps/mywelcome/app-bangle1.js": {
     "hash": "d569916d2a07f067c96ab45f23b12bf68579c9861927613e228c4536485c1454",
-    "rules": [
-      "no-undef"
-    ]
-  },
-  "apps/multidice/app.js": {
-    "hash": "4657e0c1a72c555426561f4395febea280d4140cfeba19429c4f0c4737caf7f5",
     "rules": [
       "no-undef"
     ]
@@ -932,12 +852,6 @@ module.exports = {
       "no-undef"
     ]
   },
-  "apps/gbmusic/boot.js": {
-    "hash": "1bf553c4c3452eae3930b4a08cd3e01efc2686fcb19fd2c4f9aa949b7768ff4c",
-    "rules": [
-      "no-undef"
-    ]
-  },
   "apps/gallifr/app.js": {
     "hash": "710063b833ce75cae54a6d0b3309653c59ae5d0e4c2cccd930921621a74f316c",
     "rules": [
@@ -970,12 +884,6 @@ module.exports = {
   },
   "apps/flightdash/flightdash.app.js": {
     "hash": "a140a630986fbaaf3845c3623e645a99d035a31c2cc8500948ad33b7e4e23a8a",
-    "rules": [
-      "no-undef"
-    ]
-  },
-  "apps/fileman/fileman.app.js": {
-    "hash": "f378179e7dd3655ba7e9ce03e1f7fd5a2d1768ad7d9083b22e7d740405be842a",
     "rules": [
       "no-undef"
     ]
@@ -1022,12 +930,6 @@ module.exports = {
       "no-undef"
     ]
   },
-  "apps/coretemp/coretemp.js": {
-    "hash": "7230802388f9cbb7026ce0e94ced6656dc79a411ef7740279ec82eb4fc892d48",
-    "rules": [
-      "no-undef"
-    ]
-  },
   "apps/contourclock/lib.js": {
     "hash": "1f2c43f7eb0cdcf3ab09f242022820f6af2962ca48226b9cde15623e61f80458",
     "rules": [
@@ -1042,12 +944,6 @@ module.exports = {
   },
   "apps/calendar/settings.js": {
     "hash": "9f05366b91d0293ed965d8de019bfd044f96683542b86ebabaa3c8d3cc3ad3a7",
-    "rules": [
-      "no-undef"
-    ]
-  },
-  "apps/calendar/calendar.js": {
-    "hash": "d4f0375fea397a1b93d39667e9f8eaf1a75ebd0462c216015352131360d30099",
     "rules": [
       "no-undef"
     ]
@@ -1108,12 +1004,6 @@ module.exports = {
   },
   "apps/approxclock/app.js": {
     "hash": "675ce5f16bb26649a39c86561e9fa46bb31e369a465fac9b35e5debfe18672ec",
-    "rules": [
-      "no-undef"
-    ]
-  },
-  "apps/altimeter/app.js": {
-    "hash": "054ac328db51034aa339f1d10b4d264badd49438b95f08bc6fbfb90bd88c6ae0",
     "rules": [
       "no-undef"
     ]

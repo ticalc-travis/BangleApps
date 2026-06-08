@@ -16,11 +16,13 @@ if (window.location.host=="banglejs.com") {
     'This is not the official Bangle.js App Loader - you can try the <a href="https://banglejs.com/apps/">Official Version</a> here.';
 }
 
-var RECOMMENDED_VERSION = "2v25";
+var RECOMMENDED_VERSION = "2v29";
 // could check http://www.espruino.com/json/BANGLEJS.json for this
 
 // We're only interested in Bangles
 DEVICEINFO = DEVICEINFO.filter(x=>x.id.startsWith("BANGLEJS"));
+// The device object (from DEVICEINFO) for the device that's been chosen
+CHOSENDEVICE = {};
 // Where we get our usage data from
 Const.APP_USAGE_JSON = "https://banglejs.com/apps/appusage.json";
 Const.APP_DATES_CSV = "appdates.csv";
@@ -45,8 +47,13 @@ function onFoundDeviceInfo(deviceId, deviceVersion) {
     fwURL = "https://www.espruino.com/Bangle.js2#firmware-updates";
     Const.MESSAGE_RELOAD = 'Hold button\nto reload';
   }
+  if (deviceId == "BANGLEJS3") {
+    fwExtraText = "with the <b>Firmware Update</b> app in this App Loader, or "
+    fwURL = "https://www.espruino.com/Bangle.js3#firmware-updates";
+    Const.MESSAGE_RELOAD = 'Hold middle button\nto reload';
+  }
 
-  if (deviceId != "BANGLEJS" && deviceId != "BANGLEJS2") {
+  if (deviceId != "BANGLEJS" && deviceId != "BANGLEJS2" && deviceId != "BANGLEJS3") {
     showToast(`You're using ${deviceId}, not a Bangle.js. Did you want <a href="https://espruino.com/apps">espruino.com/apps</a> instead?` ,"warning", 20000);
   } else if (versionLess(deviceVersion, RECOMMENDED_VERSION)) {
     showToast(`You're using an old Bangle.js firmware (${deviceVersion}) and ${RECOMMENDED_VERSION} is available (<a href="https://www.espruino.com/ChangeLog" target="_blank">see changes</a>). You can update ${fwExtraText}<a href="${fwURL}" target="_blank">with the instructions here</a>` ,"warning", 20000);
@@ -104,6 +111,7 @@ function filterAppsForDevice(deviceId) {
     originalAppJSON = appJSON;
 
   var device = DEVICEINFO.find(d=>d.id==deviceId);
+  CHOSENDEVICE = device;
   // set the device dropdown
   document.querySelector(".devicetype-nav span").innerText = device ? device.name : "All apps";
 
@@ -120,7 +128,7 @@ function filterAppsForDevice(deviceId) {
           console.log(`App ${app.id} doesn't include a 'supports' field - ignoring`);
           return false;
         }
-        if (app.supports.includes(deviceId)) return true;
+        if (app.supports.includes(deviceId) || app.supports.includes(deviceId+"_COMPAT")) return true;
         //console.log(`Dropping ${app.id} because ${deviceId} is not in supported list ${app.supports.join(",")}`);
         return false;
       });
@@ -143,6 +151,18 @@ function setSavedDeviceId(deviceId) {
 
 // At boot, show a window to choose which type of device you have...
 window.addEventListener('load', (event) => {
+  if (window.location.search) {
+    let searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has("dev_id")) // dev_id=BANGLEJS2 for example, to stop the popup
+      setSavedDeviceId(searchParams.get("dev_id"));
+  }
+
+  // set up the device chooser dropdown
+  var deviceChooser = document.getElementById("device-dropdown");
+  DEVICEINFO.forEach(d=>{
+    deviceChooser.innerHTML += `<li class="menu-item"><a dt="${d.id}">${d.name}</a></li>`;
+  });
+
   let deviceId = getSavedDeviceId()
   if (deviceId !== undefined) return; // already chosen
 
@@ -212,7 +232,7 @@ window.addEventListener('load', (event) => {
   el = document.getElementById("reinstallall");
   if (el) el.addEventListener("click",event=>{
     var promise =  showPrompt("Reinstall","Really re-install all apps?").then(() => {
-      Comms.reset().then(_ =>
+      startOperation({name:"Reinstall All Apps"}, () => Comms.reset().then(_ =>
         getInstalledApps()
       ).then(installedapps => {
         console.log(installedapps);
@@ -224,7 +244,7 @@ window.addEventListener('load', (event) => {
           app = appJSON.find(a => a.id==oldApp.id);
           if (!app)
             return console.log(`Ignoring ${oldApp.id} as not found`);
-          promise = promise.then(() => updateApp(app, {noReset:true, noFinish:true}));
+          promise = promise.then(() => updateApp(app, {noReset:true, noFinish:true, noNewOperation: true}));
         });
         return promise;
       }).then( _ =>
@@ -232,34 +252,36 @@ window.addEventListener('load', (event) => {
       ).catch(err=>{
         Progress.hide({sticky:true});
         showToast("App re-install failed, "+err,"error");
-      });
+      }));
     });
   });
-
 
   // Button to install all default apps in one go
   el = document.getElementById("installdefault");
   if (el) el.addEventListener("click", event=>{
-    getInstalledApps().then(() => {
+    startOperation({name:"Install Default Apps"}, () => getInstalledApps().then(() => {
       if (device.id == "BANGLEJS")
         return httpGet("defaultapps_banglejs1.json");
       if (device.id == "BANGLEJS2")
         return httpGet("defaultapps_banglejs2.json");
+      if (device.id == "BANGLEJS3")
+        return httpGet("defaultapps_banglejs3.json");
       throw new Error("Unknown device "+device.id);
     }).then(json=>{
       return installMultipleApps(JSON.parse(json), "default");
     }).catch(err=>{
       Progress.hide({sticky:true});
       showToast("App Install failed, "+err,"error");
-    });
+    }));
   });
 
   // Button to reset the Bangle's settings
   el = document.getElementById("defaultbanglesettings");
   if (el) el.addEventListener("click", event=>{
     showPrompt("Reset Settings","Really reset Bangle.js settings?").then(() => {
-      Comms.write("\x10require('Storage').erase('setting.json');load()\n");
-      showToast("Settings reset!", "success");
+      startOperation({name:"Reset Settings"}, () =>
+        Comms.write("\x10require('Storage').erase('setting.json');load()\n").then(() =>
+          showToast("Settings reset!", "success")));
     }, function() { /* cancelled */ });
   });
 
@@ -267,12 +289,16 @@ window.addEventListener('load', (event) => {
   // BLE Compatibility
   var selectBLECompat = document.getElementById("settings-ble-compat");
   if (selectBLECompat) {
-    Puck.increaseMTU = !SETTINGS.bleCompat;
+    function setBLECompat(compat) {
+      if ("undefined"!==typeof Puck) Puck.increaseMTU = !compat;
+      if ("undefined"!==typeof UART) UART.increaseMTU = !compat;
+    }
+    setBLECompat(SETTINGS.bleCompat);
     selectBLECompat.checked = !!SETTINGS.bleCompat;
     selectBLECompat.addEventListener("change",event=>{
       console.log("BLE compatibility mode "+(event.target.checked?"on":"off"));
       SETTINGS.bleCompat = event.target.checked;
-      Puck.increaseMTU = !SETTINGS.bleCompat;
+      setBLECompat(SETTINGS.bleCompat);
       saveSettings();
     });
   }
@@ -329,6 +355,16 @@ window.addEventListener('load', (event) => {
     });
     reloadLanguage();
   });
+
+  if ((typeof Android === "undefined") && !navigator.bluetooth) {
+    console.warn("No Web Bluetooth on this platform");
+    var iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (iOS) {
+      showToast(`iOS doesn't natively support Web Bluetooth. To use Web Bluetooth on iOS you'll need to <a href="https://itunes.apple.com/us/app/webble/id1193531073">download the WebBLE App</a>`, "error", 1000000000);
+    } else {
+      showToast(`This Web Browser doesn't support Web Bluetooth.\nPlease <a href="https://www.espruino.com/Quick+Start+BLE#with-web-bluetooth">click here to see instructions for enabling it</a>`, "error", 1000000000);
+    }
+  }
 });
 
 function onAppJSONLoaded() {

@@ -1,4 +1,4 @@
-(function() {
+(() => {
     var weather;
     var weatherLib = require("weather");
 
@@ -6,14 +6,20 @@
       weather = weatherLib.get();
       if(weather){
         weather.temp = require("locale").temp(weather.temp-273.15);
-        weather.hum = weather.hum + "%";
+        weather.feels = require("locale").temp(weather.feels-273.15);
+        weather.hum = `${weather.hum}%`;
         weather.wind = require("locale").speed(weather.wind).match(/^(\D*\d*)(.*)$/);
-        weather.wind = Math.round(weather.wind[1]) + "kph";
+        weather.wind = Math.round(weather.wind[1]) +" "+ weather.wind[2];
+        if(weather.hi) weather.hi = parseInt(require("locale").temp(weather.hi-273.15));
+        if(weather.lo) weather.lo = parseInt(require("locale").temp(weather.lo-273.15));
+        
+
       } else {
         weather = {
           temp: "?",
           hum: "?",
           wind: "?",
+          feels: "?",
           txt: "?",
         };
       }
@@ -44,12 +50,13 @@
                 hasRange : true,
                 get: () => ({ text: weather.temp, img: weatherIcon(weather.code),
                   color: weatherLib.getColor(weather.code),
-                  v: parseInt(weather.temp), min: -30, max: 55}),
+                  v: parseInt(weather.temp), min: weather.lo?weather.lo:-30, max: weather.hi?weather.hi:50}),
                 show: function() {
                   this.updater = _updater.bind(this);
                   weatherLib.on("update", this.updater);
                 },
                 hide: function () { weatherLib.removeListener("update", this.updater); }
+              ,run : function() {load("weather.app.js");}
             },
             {
                 name: "condition",
@@ -61,17 +68,31 @@
                   weatherLib.on("update", this.updater);
                 },
                 hide: function () { weatherLib.removeListener("update", this.updater); }
+              ,run : function() {load("weather.app.js");}
             },
             {
                 name: "temperature",
                 hasRange : true,
                 get: () => ({ text: weather.temp, img: atob("GBiBAAA8AAB+AADnAADDAADDAADDAADDAADDAADbAADbAADbAADbAADbAADbAAHbgAGZgAM8wAN+wAN+wAM8wAGZgAHDgAD/AAA8AA=="),
-                  v: parseInt(weather.temp), min: -30, max: 55}),
+                  v: parseInt(weather.temp), min: weather.lo?weather.lo:-30, max: weather.hi?weather.hi:50}),
                 show: function() {
                   this.updater = _updater.bind(this);
                   weatherLib.on("update", this.updater);
                 },
                 hide: function () { weatherLib.removeListener("update", this.updater); }
+              ,run : function() {load("weather.app.js");}
+            },
+          {
+                name: "feelsLike",
+                hasRange : true,
+                get: () => ({ text: weather.feels, img: atob("GBiBAAAAAAHAAAPgAAfgAAfgAAfg4APhsAfxEB/5EB/5ED/9ED/9ED/9ED/9ED/9EB/9UB/7UA/yyAf26Afk7AfmyAfjGAfh8AAAAA=="),
+                  v: parseInt(weather.feels), min: weather.lo?weather.lo:-30, max: weather.hi?weather.hi:50}),
+                show: function() {
+                  this.updater = _updater.bind(this);
+                  weatherLib.on("update", this.updater);
+                },
+                hide: function () { weatherLib.removeListener("update", this.updater); }
+              ,run : function() {load("weather.app.js");}
             },
             {
                 name: "humidity",
@@ -83,6 +104,7 @@
                   weatherLib.on("update", this.updater);
                 },
                 hide: function () { weatherLib.removeListener("update", this.updater); }
+              ,run : function() {load("weather.app.js");}
             },
             {
                 name: "wind",
@@ -94,6 +116,7 @@
                   weatherLib.on("update", this.updater);
                 },
                 hide: function () { weatherLib.removeListener("update", this.updater); }
+              ,run : function() {load("weather.app.js");}
             },
         ]
     };
