@@ -208,8 +208,10 @@ class TimerView {
       // first
       if (tt.SETTINGS.view_mode == 3) {
         let next_outer = this.tri_timer.time_to_next_outer();
-        next_tick = this.tri_timer.time_to_next_event() % 60000;
-        next_tick = Math.min(next_tick, next_outer);
+        let next_event = this.tri_timer.time_to_next_event() % 60000 || Infinity;
+        next_tick = Math.min(next_event, next_outer);
+        console.debug('Next outer: ' + next_outer);
+        console.debug('Next event: ' + next_event);
       }
 
       console.debug('Next render update scheduled in ' + next_tick);
