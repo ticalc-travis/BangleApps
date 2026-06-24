@@ -34,8 +34,11 @@ exports.getActiveAlarms = function (alarms, time) {
 // Set up a modified alarm/timer so it's ready to insert into the list of alarms. For timers, they fire the set time from now, and alarms are set to fire at the right time on the right day
 exports.updateAlarm = function(alarm) {
   var time = new Date(), currentTime = timeToMillis(time);
-  if (alarm.timer) { // if it's a timer, set the start time as a time from *now*
-    alarm.t = (currentTime + alarm.timer) % 86400000; // alarm time in day
+  if (alarm.timer) {
+    if (alarm.t===undefined) {
+      // if it's a timer, set the start time as a time from *now*
+      alarm.t = (currentTime + alarm.timer) % 86400000; // alarm time in day
+    }
     alarm.last = 0; // don't need to specify a last day for alarms
     // if timer would have gone on until a later day, set a date (fix #4220)
     if (alarm.t < currentTime || alarm.timer>86400000/*24h*/)
