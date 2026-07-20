@@ -28,6 +28,8 @@ function showSnoozeMenu(alarm){
     let currentTime = (time.getHours()*3600000)+(time.getMinutes()*60000)+(time.getSeconds()*1000);
     alarm.t = currentTime + snoozeTime;
     alarm.t %= 86400000;
+    delete alarm.last;
+    require("sched").updateAlarm(alarm);
     Bangle.emit("alarmSnooze", alarm);
 
     // The updated alarm is still a member of 'alarms'
@@ -90,6 +92,8 @@ function showAlarm(alarm) {
       let currentTime = (time.getHours()*3600000)+(time.getMinutes()*60000)+(time.getSeconds()*1000);
       alarm.t = currentTime + settings.defaultSnoozeMillis;
       alarm.t %= 86400000;
+      delete alarm.last;
+      require("sched").updateAlarm(alarm);
       Bangle.emit("alarmSnooze", alarm);
     } else { // sleep=2, stop the alarm
       let del = alarm.del === undefined ? settings.defaultDeleteExpiredTimers : alarm.del;
