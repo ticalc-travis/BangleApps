@@ -50,28 +50,40 @@ exports.cache = function(settings) {
 
 /** Call with app object from .cache() */
 exports.loadApp = function(app) {
+  Bangle.showLoadingScreen();
+  console.debug('[loadApp] perf a ' + new Date().getTime());
   if (!app.src) return E.showMessage(/*LANG*/ "App Source\nNot found"); // sanity check
+  console.debug('[loadApp] perf a ' + new Date().getTime());
   if (app.wid===undefined) exports.cacheWidgetsCheck([app]); // If we hadn't stored whether the app uses widgets before, check now
   // TODO: If there's a load screen boot app, we could call it? Or maybe Bangle.load should do that?
+  console.debug('[loadApp] perf a ' + new Date().getTime());
   if (app.wid || global.WIDGETS===undefined) Bangle.load(app.src) // if app uses widgets or we don't have any, we can fast load into it
   else if (Object.keys(WIDGETS).every(w=>!!WIDGETS[w].remove)) { // are widgets unloadable? !! needed before 2v29 fw
+    console.debug('[loadApp] perf b ' + new Date().getTime());
     Object.keys(WIDGETS).forEach(w=>WIDGETS[w].remove());
     delete global.WIDGETS;
+    console.debug('[loadApp] perf b ' + new Date().getTime());
     Bangle.load(app.src)
   } else load(app.src); // otherwise default to slow load
 };
 
 exports.cacheWidgetsCheck = function(apps) {
+  console.debug('[loadApp] perf c ' + new Date().getTime());
   let s = require("Storage");
   let launchCache = s.readJSON("launch.cache.json", true)||{};
+  console.debug('[loadApp] perf c ' + new Date().getTime());
   apps.forEach(app => {
     let src = s.read(app.src)
+    console.debug('[loadApp] perf c1 ' + new Date().getTime());
     app.wid = (src!==undefined)&&src.includes("Bangle.loadWidgets");
+    console.debug('[loadApp] perf c2 ' + new Date().getTime());
     // Now update the launch cache to save having to do this again
     let a = launchCache.apps.find(a=>a.src===app.src);
+    console.debug('[loadApp] perf c3 ' + new Date().getTime());
     if (a) a.wid = app.wid;
   });
   s.writeJSON("launch.cache.json", launchCache);
+  console.debug('[loadApp] perf c4 ' + new Date().getTime());
   return launchCache
 }
 
