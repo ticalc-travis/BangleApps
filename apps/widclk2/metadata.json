@@ -1,0 +1,13 @@
+{
+  "id": "widclk2",
+  "name": "Digital clock widget with bold font",
+  "version": "0.00",
+  "description": "A simple digital clock widget that appears when not showing a fullscreen clock",
+  "icon": "widget.png",
+  "type": "widget",
+  "tags": "widget,clock",
+  "supports": ["BANGLEJS","BANGLEJS2"],
+  "storage": [
+    {"name":"widclk2.wid.js","url":"widget.js"}
+  ]
+}
