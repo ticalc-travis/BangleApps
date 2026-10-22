@@ -112,6 +112,7 @@ module.exports = {
         "getSerial": "readonly",
         "getTime": "readonly",
         "global": "readonly",
+        "globalThis": "readonly",
         "HIGH": "readonly",
         "I2C1": "readonly",
         "Infinity": "readonly",
@@ -191,7 +192,7 @@ module.exports = {
         "bleServiceOptions": "writable", // available in boot.js code that's called ad part of bootupdate
     },
     "parserOptions": {
-        "ecmaVersion": 11
+        "ecmaVersion": 2022
     },
     "rules": {
         "indent": [

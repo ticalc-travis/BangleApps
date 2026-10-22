@@ -19,7 +19,17 @@
 
 	const update = (newState: State) => {
 		state = newState;
-		WIDGETS["bluetooth"]!.width = width();
+
+		const newWidth = width();
+		const w = WIDGETS["bluetooth"]!;
+		if (newWidth === 0 && w.width){
+			// hiding widget, clear our area
+			g
+				.reset("widget")
+				.clearRect({ x: w.x!, y: w.y!, w: w.width, h: 24 });
+		}
+		w.width = newWidth;
+
 		setTimeout(Bangle.drawWidgets, 50); // no need for .bind()
 	};
 
@@ -43,12 +53,12 @@
 		area: "tl",
 		sortorder: -1,
 		draw: function() {
-			if (state == State.Asleep)
+			if (state === State.Asleep)
 				return;
 
 			g.reset();
 
-			g.setColor(colours[state][`${g.theme.dark}`]);
+			g.setColor(colours[state][g.theme.dark as unknown as `${boolean}`]);
 
 			g.drawImage(
 				atob("CxQBBgDgFgJgR4jZMawfAcA4D4NYybEYIwTAsBwDAA=="),

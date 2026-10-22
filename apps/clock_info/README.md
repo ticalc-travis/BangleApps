@@ -36,10 +36,12 @@ and previously focussed Clock Infos
 * `HRM` - (default=always) when does the HRM stay on?
   * `Always` - When a HRM ClockInfo is shown, keep the HRM on
   * `Tap` - When a HRM ClockInfo is shown, turn HRM on for 1 minute. Turn on again when tapped.
+* `Health Category` - (default=false) Whether or not to move built-in health clockInfo items (hrm, steps) from `Bangle` to the `Health` category, to be more organized with many items in the `Bangle` list. Other apps that add Health clockInfos like [Calories](https://banglejs.com/apps/?id=calories) can also add their own items to the Health list.
 * `Max Altitude` - on clocks like [Circles Clock](https://banglejs.com/apps/?id=circlesclock) a
   progress/percent indicator may be shown. The percentage for altitude will be how far towards
   the Max Altitude you are. If you go higher than `Max Altitude` the correct altitude will still
   be shown - the percent indicator will just read 100%
+* `Haptics` - (default=true) Whether or not to use a slight vibration when cycling between different infos, or lists (with a slightly stronger buzz). 
 
 ## API (Software development)
 
@@ -50,7 +52,7 @@ extensions).
 `load()` returns an array of menu objects, where each object contains a list of menu items:
 * `name` : text to display and identify menu object (e.g. weather)
 * `img` : a 24x24px image
-* `dynamic` : if `true`, items are not constant but are sorted (e.g. calendar events sorted by date)
+* `dynamic` : if `true`, items are not constant but are sorted (e.g. calendar events sorted by date). This is only used by a few clocks, for example `circlesclock`
 * `items` : menu items such as temperature, humidity, wind etc.
 
 Note that each item is an object with:

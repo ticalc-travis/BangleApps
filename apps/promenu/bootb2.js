@@ -1,4 +1,12 @@
-E.showMenu = function (items) {
+var _a, _b;
+var prosettings = (require("Storage").readJSON("promenu.settings.json", true) || {});
+(_a = prosettings.naturalScroll) !== null && _a !== void 0 ? _a : (prosettings.naturalScroll = false);
+(_b = prosettings.wrapAround) !== null && _b !== void 0 ? _b : (prosettings.wrapAround = true);
+E.showMenu = (function (items) {
+    if (items == null) {
+        g.clearRect(Bangle.appRect);
+        return Bangle.setUI();
+    }
     var RectRnd = function (x1, y1, x2, y2, r) {
         var pp = [];
         pp.push.apply(pp, g.quadraticBezier([x2 - r, y1, x2, y1, x2, y1 + r]));
@@ -13,23 +21,65 @@ E.showMenu = function (items) {
         g.setColor(255, 255, 255);
     };
     var options = items && items[""] || {};
-    if (items)
-        delete items[""];
-    var menuItems = Object.keys(items);
+    var menuItems = Object.keys(items).filter(function (x) { return x.length; });
     var fontHeight = options.fontHeight || 25;
     var selected = options.scroll || options.selected || 0;
-    var ar = Bangle.appRect;
-    g.reset().clearRect(ar);
-    var x = ar.x;
-    var x2 = ar.x2;
-    var y = ar.y;
-    var y2 = ar.y2 - 12;
-    if (options.title)
-        y += 22;
+    g.reset().clearRect(Bangle.appRect);
     var lastIdx = 0;
     var selectEdit = undefined;
+    var scroller = {
+        scroll: selected,
+    };
+    var nameScroller = null;
+    var drawLine = function (name, v, item, idx, x, y, nameScroll) {
+        if (nameScroll === void 0) { nameScroll = 0; }
+        var x2 = Bangle.appRect.x2;
+        var hl = (idx === selected && !selectEdit);
+        if (g.theme.dark) {
+            fillRectRnd(x, y, x2, y + fontHeight - 3, 7, hl ? g.theme.bgH : g.theme.bg + 40);
+        }
+        else {
+            fillRectRnd(x, y, x2, y + fontHeight - 3, 7, hl ? g.theme.bgH : g.theme.bg - 20);
+        }
+        g.setFont12x20()
+            .setColor(hl ? g.theme.fgH : g.theme.fg)
+            .setFontAlign(-1, -1);
+        var vplain = v.indexOf("\0") < 0;
+        var truncated = false;
+        var drawn = false;
+        if (vplain) {
+            var isFunc = typeof item === "function";
+            var lim = isFunc ? 15 : 17 - v.length;
+            if (name.length >= lim) {
+                var len = isFunc ? 15 : 12 - v.length;
+                var dots = name.length - nameScroll > len ? "..." : "";
+                g.drawString(name.substring(nameScroll, nameScroll + len) + dots, x + 3.7, y + 2.7);
+                drawn = true;
+                truncated = true;
+            }
+        }
+        if (!drawn)
+            g.drawString(name, x + 3.7, y + 2.7);
+        var xo = x2;
+        if (selectEdit && idx === selected) {
+            xo -= 24 + 1;
+            g.setColor(g.theme.fgH)
+                .drawImage("\x0c\x05\x81\x00 \x07\x00\xF9\xF0\x0E\x00@", xo, y + (fontHeight - 10) / 2, { scale: 2 });
+        }
+        g.setFontAlign(1, -1);
+        g.drawString(v, xo - 2, y + 1);
+        return truncated;
+    };
     var l = {
         draw: function (rowmin, rowmax) {
+            var _a = Bangle.appRect, x = _a.x, x2 = _a.x2, y = _a.y, y2 = _a.y2;
+            if (y === 0)
+                y = 24;
+            if (options.title)
+                y += 22;
+            y2 -= 12;
+            if (nameScroller)
+                clearInterval(nameScroller), nameScroller = null;
             var rows = 0 | Math.min((y2 - y) / fontHeight, menuItems.length);
             var idx = E.clip(selected - (rows >> 1), 0, menuItems.length - rows);
             if (idx != lastIdx)
@@ -52,18 +102,9 @@ E.showMenu = function (items) {
                     rows = 1 + rowmax - rowmin;
                 }
             }
-            while (rows--) {
+            var _loop_1 = function () {
                 var name = menuItems[idx];
                 var item = items[name];
-                var hl = (idx === selected && !selectEdit);
-                if (g.theme.dark) {
-                    fillRectRnd(x, iy, x2, iy + fontHeight - 3, 7, hl ? g.theme.bgH : g.theme.bg + 40);
-                }
-                else {
-                    fillRectRnd(x, iy, x2, iy + fontHeight - 3, 7, hl ? g.theme.bgH : g.theme.bg - 20);
-                }
-                g.setColor(hl ? g.theme.fgH : g.theme.fg);
-                g.setFontAlign(-1, -1);
                 var v = void 0;
                 if (typeof item === "object") {
                     v = "format" in item
@@ -75,37 +116,30 @@ E.showMenu = function (items) {
                 else {
                     v = "";
                 }
-                {
-                    if (name.length >= 17 - v.length && typeof item === "object") {
-                        g.drawString(name.substring(0, 12 - v.length) + "...", x + 3.7, iy + 2.7);
-                    }
-                    else if (name.length >= 15) {
-                        g.drawString(name.substring(0, 15) + "...", x + 3.7, iy + 2.7);
-                    }
-                    else {
-                        g.drawString(name, x + 3.7, iy + 2.7);
-                    }
-                    var xo = x2;
-                    if (selectEdit && idx === selected) {
-                        xo -= 24 + 1;
-                        g.setColor(g.theme.fgH)
-                            .drawImage("\x0c\x05\x81\x00 \x07\x00\xF9\xF0\x0E\x00@", xo, iy + (fontHeight - 10) / 2, { scale: 2 });
-                    }
-                    g.setFontAlign(1, -1);
-                    g.drawString(v, xo - 2, iy + 1);
+                var truncated = drawLine(name, v, item, idx, x, iy, 0);
+                if (truncated && idx === selected) {
+                    var nameScroll_1 = 0;
+                    nameScroller = setInterval(function (name, v, item, idx, x, iy) {
+                        drawLine(name, v, item, idx, x, iy, nameScroll_1);
+                        nameScroll_1 += 1;
+                        if (nameScroll_1 >= name.length - 5)
+                            nameScroll_1 = 0;
+                    }, 300, name, v, item, idx, x, iy);
                 }
-                g.setColor(g.theme.fg);
                 iy += fontHeight;
                 idx++;
+            };
+            while (rows--) {
+                _loop_1();
             }
             g.setFontAlign(-1, -1);
             g.setColor((idx < menuItems.length) ? g.theme.fg : g.theme.bg).fillPoly([72, 166, 104, 166, 88, 174]);
             g.flip();
         },
-        select: function () {
+        select: function (evt) {
             var item = items[menuItems[selected]];
             if (typeof item === "function") {
-                item();
+                item(evt);
             }
             else if (typeof item === "object") {
                 if (typeof item.value === "number") {
@@ -115,12 +149,12 @@ E.showMenu = function (items) {
                     if (typeof item.value === "boolean")
                         item.value = !item.value;
                     if (item.onchange)
-                        item.onchange(item.value);
+                        item.onchange(item.value, evt);
                 }
                 l.draw();
             }
         },
-        move: function (dir) {
+        move: function (dir, evt) {
             var item = selectEdit;
             if (typeof item === "object" && typeof item.value === "number") {
                 var orig = item.value;
@@ -131,16 +165,23 @@ E.showMenu = function (items) {
                     item.value = item.wrap ? item.min : item.max;
                 if (item.value !== orig) {
                     if (item.onchange)
-                        item.onchange(item.value);
+                        item.onchange(item.value, evt);
                     l.draw(selected, selected);
                 }
             }
             else {
                 var lastSelected = selected;
-                selected = (selected + dir + menuItems.length) % menuItems.length;
+                if (prosettings.wrapAround) {
+                    selected = (selected + dir + menuItems.length) % menuItems.length;
+                }
+                else {
+                    selected = E.clip(selected + dir, 0, menuItems.length - 1);
+                }
+                scroller.scroll = selected;
                 l.draw(Math.min(lastSelected, selected), Math.max(lastSelected, selected));
             }
         },
+        scroller: scroller,
     };
     l.draw();
     var back = options.back;
@@ -160,17 +201,37 @@ E.showMenu = function (items) {
         };
         Bangle.on('swipe', onSwipe);
     }
-    Bangle.setUI({
+    var cb = function (dir, evt) {
+        if (dir)
+            l.move(prosettings.naturalScroll ? -dir : dir, evt);
+        else
+            l.select(evt);
+    };
+    var touchcb = (function (_button, xy) {
+        cb(void 0, xy);
+    });
+    var uiopts = {
         mode: "updown",
         back: back,
         remove: function () {
+            var _a;
+            if (nameScroller)
+                clearInterval(nameScroller);
             Bangle.removeListener("swipe", onSwipe);
+            if (setUITouch)
+                Bangle.removeListener("touch", touchcb);
+            (_a = options.remove) === null || _a === void 0 ? void 0 : _a.call(options);
         },
-    }, function (dir) {
-        if (dir)
-            l.move(dir);
-        else
-            l.select();
-    });
+    };
+    var setUITouch = process.env.VERSION >= "2v26";
+    if (!setUITouch) {
+        uiopts.touch = touchcb;
+    }
+    Bangle.setUI(uiopts, cb);
+    if (setUITouch) {
+        Bangle.removeListener("touch", Bangle.touchHandler);
+        delete Bangle.touchHandler;
+        Bangle.on("touch", touchcb);
+    }
     return l;
-};
+});

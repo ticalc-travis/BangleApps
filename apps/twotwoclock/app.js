@@ -73,10 +73,9 @@ for (var i=0;i<10;i++)
     var mn = d.getMinutes().toString().padStart(2,0);
     var date = require("locale").date(new Date()).split(" ").slice(0,2).join(" ").toUpperCase();
     var x = 6, y = 16, w = 55, h = 67, datesz = 20, s=5;
-    g.reset();
     background.fillRect(x, y, x + w*2, y + h*2 + datesz);
     var dx = x+w, dy = y+h+datesz-10;
-    g.setFont("LECO1976Regular").setFontAlign(0,0);
+    g.reset().setFont("LECO1976Regular").setFontAlign(0,0);
     g.setColor(g.theme.bg).drawString(date, dx+3,dy-3).drawString(date, dx+3,dy+3);
     g.drawString(date, dx-3,dy-3).drawString(date, dx-3,dy+3);
     g.drawString(date, dx,dy-3).drawString(date, dx,dy+3);
@@ -96,6 +95,7 @@ for (var i=0;i<10;i++)
     remove: function() {
       if (drawTimeout) clearTimeout(drawTimeout);
       drawTimeout = undefined;
+      background.unload(); // free memory from background
       if (clockInfoMenuA) clockInfoMenuA.remove();
       if (clockInfoMenuB) clockInfoMenuB.remove();
       require("widget_utils").show(); // re-show widgets
@@ -106,6 +106,7 @@ for (var i=0;i<10;i++)
   require("widget_utils").swipeOn();
   let R = Bangle.appRect;
   let background = require("clockbg");
+  background.load(); // reload if we fast loaded into here
   background.fillRect(R);
   draw();
   g.flip();
@@ -134,8 +135,8 @@ for (var i=0;i<10;i++)
     if (g.stringWidth(txt) > options.w) // if too big, smaller font
       g.setFont("LECO1976Regular14");
     if (g.stringWidth(txt) > options.w) {// if still too big, split to 2 lines
-      var l = g.wrapString(txt, options.w);
-      txt = l.slice(0,2).join("\n") + (l.length>2)?"...":"";
+      var l = g.wrapString(txt, options.w-4);
+      txt = l.slice(0,2).join("\n") + ((l.length>2)?"...":"");
     }
     var x = options.x+options.w/2, y = options.y+54;
     g.setColor(g.theme.bg).drawString(txt, x-2, y). // draw the text background
@@ -147,12 +148,12 @@ for (var i=0;i<10;i++)
   };
 
   clockInfoMenuA = require("clock_info").addInteractive(clockInfoItems, {
-    app:"pebblepp",
+    app:"twotwoclock",
     x : g.getWidth()-clockInfoW, y: 0, w: clockInfoW, h:clockInfoH,
     draw : clockInfoDraw
   });
   clockInfoMenuB = require("clock_info").addInteractive(clockInfoItems, {
-    app:"pebblepp",
+    app:"twotwoclock",
     x : g.getWidth()-clockInfoW, y: clockInfoH, w: clockInfoW, h:clockInfoH,
     draw : clockInfoDraw
   });

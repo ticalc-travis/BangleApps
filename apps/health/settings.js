@@ -1,8 +1,11 @@
 (function (back) {
   var settings = Object.assign({
     hrm: 0,
+    hrmTimeout: 0,
+    wearCheckTemp: 0, // 0 = Movement/Z-Axis, > 0 = Temperature check
     stepGoal: 10000,
-    stepGoalNotification: false
+    stepGoalNotification: false,
+    useUTC : false
   }, require("Storage").readJSON("health.json", true) || {});
 
   function setSettings() {
@@ -30,6 +33,30 @@
       }
     },
 
+    /*LANG*/"HRM Stop Delay": {
+      value: settings.hrmTimeout,
+      min: 0,
+      max: 60,
+      step: 1,
+      format: v => v === 0 ? /*LANG*/"None" : v + "s",
+      onchange: v => {
+        settings.hrmTimeout = v;
+        setSettings();
+      }
+    },
+
+    /*LANG*/"Wear Check": {
+      value: settings.wearCheckTemp || 0,
+      min: 0,
+      max: 40,
+      step: 0.5,
+      format: v => v === 0 ? /*LANG*/"Movement" : v.toFixed(1) + "°C",
+      onchange: v => {
+        settings.wearCheckTemp = v;
+        setSettings();
+      }
+    },
+
     /*LANG*/"Daily Step Goal": {
       value: settings.stepGoal,
       min: 0,
@@ -42,9 +69,17 @@
     },
 
     /*LANG*/"Step Goal Notification": {
-      value: "stepGoalNotification" in settings ? settings.stepGoalNotification : false,
-      onchange: () => {
-        settings.stepGoalNotification = !settings.stepGoalNotification;
+      value: !!settings.stepGoalNotification,
+      onchange: v => {
+        settings.stepGoalNotification = v;
+        setSettings();
+      }
+    },
+
+     /*LANG*/"UTC time": {
+      value: !!settings.useUTC,
+      onchange: v => {
+        settings.useUTC = v;
         setSettings();
       }
     },

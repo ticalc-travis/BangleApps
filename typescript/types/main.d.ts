@@ -5,13 +5,18 @@
 
 // TYPES
 
+type AES_CCM_EncryptResult = {
+  data: ArrayBuffer,
+  tag: ArrayBuffer,
+};
+
 /**
  * Menu item that holds a boolean value.
  */
 type MenuBooleanItem = {
   value: boolean;
   format?: (value: boolean) => string;
-  onchange?: (value: boolean) => void;
+  onchange?: (value: boolean, evt?: TouchCallbackXY) => void;
 };
 
 /**
@@ -20,7 +25,7 @@ type MenuBooleanItem = {
 type MenuNumberItem = {
   value: number;
   format?: (value: number) => string;
-  onchange?: (value: number) => void;
+  onchange?: (value: number, evt?: TouchCallbackXY) => void;
   step?: number;
   min?: number;
   max?: number;
@@ -33,6 +38,7 @@ type MenuNumberItem = {
 type MenuOptions = {
   title?: string;
   back?: () => void;
+  remove?: () => void;
   selected?: number;
   fontHeight?: number;
   scroll?: number;
@@ -55,10 +61,10 @@ type Menu = {
   ""?: MenuOptions;
   [key: string]:
     | MenuOptions
-    | (() => void)
+    | ((e?: TouchCallbackXY) => void)
     | MenuBooleanItem
     | MenuNumberItem
-    | { value: string; onchange?: () => void }
+    | { value: string; onchange?: (value: unknown, evt?: TouchCallbackXY) => void }
     | undefined;
 };
 
@@ -67,9 +73,16 @@ type Menu = {
  */
 type MenuInstance = {
   draw: () => void;
-  move: (n: number) => void;
-  select: () => void;
+  scroller?: MenuScroller; // BangleJS 2
 };
+
+/**
+ * Menu scroller.
+ */
+type MenuScroller = {
+  scroll: number;
+};
+
 
 declare const BTN1: Pin;
 declare const BTN2: Pin;
@@ -139,7 +152,8 @@ type TapAxis = -2 | -1 | 0 | 1 | 2;
 
 type SwipeCallback = (directionLR: -1 | 0 | 1, directionUD?: -1 | 0 | 1) => void;
 
-type TouchCallback = (button: number, xy?: { x: number, y: number }) => void;
+type TouchCallbackXY = { x: number, y: number, type: 0 | 2 };
+type TouchCallback = (button?: number, xy?: TouchCallbackXY) => void;
 
 type DragCallback = (event: {
   x: number;
@@ -368,130 +382,6 @@ type PipeOptions = {
 // CLASSES
 
 /**
- * A class to support some simple Queue handling for RTOS queues
- * @url http://www.espruino.com/Reference#Queue
- */
-declare class Queue {
-  /**
-   * Creates a Queue Object
-   * @constructor
-   *
-   * @param {any} queueName - Name of the queue
-   * @returns {any} A Queue object
-   * @url http://www.espruino.com/Reference#l_Queue_Queue
-   */
-  static new(queueName: any): any;
-
-  /**
-   * reads one character from queue, if available
-   * @url http://www.espruino.com/Reference#l_Queue_read
-   */
-  read(): void;
-
-  /**
-   * Writes one character to queue
-   *
-   * @param {any} char - char to be send
-   * @url http://www.espruino.com/Reference#l_Queue_writeChar
-   */
-  writeChar(char: any): void;
-
-  /**
-   * logs list of queues
-   * @url http://www.espruino.com/Reference#l_Queue_log
-   */
-  log(): void;
-}
-
-/**
- * A class to support some simple Task handling for RTOS tasks
- * @url http://www.espruino.com/Reference#Task
- */
-declare class Task {
-  /**
-   * Creates a Task Object
-   * @constructor
-   *
-   * @param {any} taskName - Name of the task
-   * @returns {any} A Task object
-   * @url http://www.espruino.com/Reference#l_Task_Task
-   */
-  static new(taskName: any): any;
-
-  /**
-   * Suspend task, be careful not to suspend Espruino task itself
-   * @url http://www.espruino.com/Reference#l_Task_suspend
-   */
-  suspend(): void;
-
-  /**
-   * Resumes a suspended task
-   * @url http://www.espruino.com/Reference#l_Task_resume
-   */
-  resume(): void;
-
-  /**
-   * returns name of actual task
-   * @returns {any} Name of current task
-   * @url http://www.espruino.com/Reference#l_Task_getCurrent
-   */
-  getCurrent(): any;
-
-  /**
-   * Sends a binary notify to task
-   * @url http://www.espruino.com/Reference#l_Task_notify
-   */
-  notify(): void;
-
-  /**
-   * logs list of tasks
-   * @url http://www.espruino.com/Reference#l_Task_log
-   */
-  log(): void;
-}
-
-/**
- * A class to handle Timer on base of ESP32 Timer
- * @url http://www.espruino.com/Reference#Timer
- */
-declare class Timer {
-  /**
-   * Creates a Timer Object
-   * @constructor
-   *
-   * @param {any} timerName - Timer Name
-   * @param {number} group - Timer group
-   * @param {number} index - Timer index
-   * @param {number} isrIndex - isr (0 = Espruino, 1 = test)
-   * @returns {any} A Timer Object
-   * @url http://www.espruino.com/Reference#l_Timer_Timer
-   */
-  static new(timerName: any, group: number, index: number, isrIndex: number): any;
-
-  /**
-   * Starts a timer
-   *
-   * @param {number} duration - duration of timmer in micro secs
-   * @url http://www.espruino.com/Reference#l_Timer_start
-   */
-  start(duration: number): void;
-
-  /**
-   * Reschedules a timer, needs to be started at least once
-   *
-   * @param {number} duration - duration of timmer in micro secs
-   * @url http://www.espruino.com/Reference#l_Timer_reschedule
-   */
-  reschedule(duration: number): void;
-
-  /**
-   * logs list of timers
-   * @url http://www.espruino.com/Reference#l_Timer_log
-   */
-  log(): void;
-}
-
-/**
  * Class containing utility functions for the
  * [ESP32](http://www.espruino.com/ESP32)
  * @url http://www.espruino.com/Reference#ESP32
@@ -586,7 +476,7 @@ declare class ESP32 {
    * @param {boolean} enable - switches Bluetooth on or off
    * @url http://www.espruino.com/Reference#l_ESP32_enableBLE
    */
-  static enableBLE(enable: boolean): void;
+  static enableBLE(enable: ShortBoolean): void;
 
   /**
    * Switches Wifi off/on, removes saved code from Flash, resets the board, and on
@@ -595,7 +485,7 @@ declare class ESP32 {
    * @param {boolean} enable - switches Wifi on or off
    * @url http://www.espruino.com/Reference#l_ESP32_enableWifi
    */
-  static enableWifi(enable: boolean): void;
+  static enableWifi(enable: ShortBoolean): void;
 
   /**
    * This function is useful for ESP32 [OTA Updates](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/ota.html)
@@ -609,7 +499,7 @@ declare class ESP32 {
    * @param {boolean} isValid - Set whether this app is valid or not. If `isValid==false` the device will reboot.
    * @url http://www.espruino.com/Reference#l_ESP32_setOTAValid
    */
-  static setOTAValid(isValid: boolean): void;
+  static setOTAValid(isValid: ShortBoolean): void;
 
 
 }
@@ -836,1421 +726,6 @@ declare class Nucleo {
 }
 
 /**
- * The NRF class is for controlling functionality of the Nordic nRF51/nRF52 chips.
- * Most functionality is related to Bluetooth Low Energy, however there are also
- * some functions related to NFC that apply to NRF52-based devices.
- * @url http://www.espruino.com/Reference#NRF
- */
-declare class NRF {
-  /**
-   * @returns {any} An object
-   * @url http://www.espruino.com/Reference#l_NRF_getSecurityStatus
-   */
-  static getSecurityStatus(): NRFSecurityStatus;
-
-  /**
-   * @returns {any} An object
-   * @url http://www.espruino.com/Reference#l_NRF_getAddress
-   */
-  static getAddress(): any;
-
-  /**
-   *
-   * @param {any} data - The service (and characteristics) to advertise
-   * @param {any} options - Optional object containing options
-   * @url http://www.espruino.com/Reference#l_NRF_setServices
-   */
-  static setServices(data: any, options: any): void;
-
-  /**
-   *
-   * @param {any} data - The data to advertise as an object - see below for more info
-   * @param {any} [options] - [optional] An object of options
-   * @url http://www.espruino.com/Reference#l_NRF_setAdvertising
-   */
-  static setAdvertising(data: any, options?: any): void;
-
-  /**
-   * Called when a host device connects to Espruino. The first argument contains the
-   * address.
-   * @param {string} event - The event to listen to.
-   * @param {(addr: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
-   * * `addr` The address of the device that has connected
-   * @url http://www.espruino.com/Reference#l_NRF_connect
-   */
-  static on(event: "connect", callback: (addr: any) => void): void;
-
-  /**
-   * Called when a host device disconnects from Espruino.
-   * The most common reason is:
-   * * 19 - `REMOTE_USER_TERMINATED_CONNECTION`
-   * * 22 - `LOCAL_HOST_TERMINATED_CONNECTION`
-   * @param {string} event - The event to listen to.
-   * @param {(reason: number) => void} callback - A function that is executed when the event occurs. Its arguments are:
-   * * `reason` The reason code reported back by the BLE stack - see Nordic's [`ble_hci.h` file](https://github.com/espruino/Espruino/blob/master/targetlibs/nrf5x_12/components/softdevice/s132/headers/ble_hci.h#L71) for more information
-   * @url http://www.espruino.com/Reference#l_NRF_disconnect
-   */
-  static on(event: "disconnect", callback: (reason: number) => void): void;
-
-  /**
-   * Called when the Nordic Bluetooth stack (softdevice) generates an error. In pretty
-   * much all cases an Exception will also have been thrown.
-   * @param {string} event - The event to listen to.
-   * @param {(msg: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
-   * * `msg` The error string
-   * @url http://www.espruino.com/Reference#l_NRF_error
-   */
-  static on(event: "error", callback: (msg: any) => void): void;
-
-  /**
-   * (Added in 2v19) Called when a central device connects to Espruino, pairs, and sends a passkey that Espruino should display.
-   * For this to be used, you'll have to specify that your device has a display using `NRF.setSecurity({mitm:1, display:1});`
-   * For instance:
-   * ```
-   * NRF.setSecurity({mitm:1, display:1});
-   * NRF.on("passkey", key => print("Enter PIN: ",passkey));
-   * ```
-   * It is also possible to specify a static passkey with `NRF.setSecurity({passkey:"123456", mitm:1, display:1});`
-   * in which case no `passkey` event handler is needed (this method works on Espruino 2v02 and later)
-   * **Note:** A similar event, [`BluetoothDevice.on("passkey", ...)`](http://www.espruino.com/Reference#l_BluetoothDevice_passkey) is available
-   * for when Espruino is connecting *to* another device (central mode).
-   * @param {string} event - The event to listen to.
-   * @param {(passkey: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
-   * * `passkey` A 6 character numeric String to be displayed
-   * @url http://www.espruino.com/Reference#l_NRF_passkey
-   */
-  static on(event: "passkey", callback: (passkey: any) => void): void;
-
-  /**
-   * Contains updates on the security of the current Bluetooth link.
-   * See Nordic's `ble_gap_evt_auth_status_t` structure for more information.
-   * @param {string} event - The event to listen to.
-   * @param {(status: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
-   * * `status` An object containing `{auth_status,bonded,lv4,kdist_own,kdist_peer}
-   * @url http://www.espruino.com/Reference#l_NRF_security
-   */
-  static on(event: "security", callback: (status: any) => void): void;
-
-  /**
-   * Called when Bluetooth advertising starts or stops on Espruino
-   * @param {string} event - The event to listen to.
-   * @param {(isAdvertising: boolean) => void} callback - A function that is executed when the event occurs. Its arguments are:
-   * * `isAdvertising` Whether we are advertising or not
-   * @url http://www.espruino.com/Reference#l_NRF_advertising
-   */
-  static on(event: "advertising", callback: (isAdvertising: boolean) => void): void;
-
-  /**
-   * Called during the bonding process to update on status
-   * `status` is one of:
-   * * `"request"` - Bonding has been requested in code via `NRF.startBonding`
-   * * `"start"` - The bonding procedure has started
-   * * `"success"` - The bonding procedure has succeeded (`NRF.startBonding`'s promise resolves)
-   * * `"fail"` - The bonding procedure has failed (`NRF.startBonding`'s promise rejects)
-   * @param {string} event - The event to listen to.
-   * @param {(status: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
-   * * `status` One of `'request'/'start'/'success'/'fail'`
-   * @url http://www.espruino.com/Reference#l_NRF_bond
-   */
-  static on(event: "bond", callback: (status: any) => void): void;
-
-  /**
-   * Called with a single byte value when Espruino is set up as a HID device and the
-   * computer it is connected to sends a HID report back to Espruino. This is usually
-   * used for handling indications such as the Caps Lock LED.
-   * @param {string} event - The event to listen to.
-   * @param {() => void} callback - A function that is executed when the event occurs.
-   * @url http://www.espruino.com/Reference#l_NRF_HID
-   */
-  static on(event: "HID", callback: () => void): void;
-
-  /**
-   * Called with discovered services when discovery is finished
-   * @param {string} event - The event to listen to.
-   * @param {() => void} callback - A function that is executed when the event occurs.
-   * @url http://www.espruino.com/Reference#l_NRF_servicesDiscover
-   */
-  static on(event: "servicesDiscover", callback: () => void): void;
-
-  /**
-   * Called with discovered characteristics when discovery is finished
-   * @param {string} event - The event to listen to.
-   * @param {() => void} callback - A function that is executed when the event occurs.
-   * @url http://www.espruino.com/Reference#l_NRF_characteristicsDiscover
-   */
-  static on(event: "characteristicsDiscover", callback: () => void): void;
-
-  /**
-   * Called when an NFC field is detected
-   * @param {string} event - The event to listen to.
-   * @param {() => void} callback - A function that is executed when the event occurs.
-   * @url http://www.espruino.com/Reference#l_NRF_NFCon
-   */
-  static on(event: "NFCon", callback: () => void): void;
-
-  /**
-   * Called when an NFC field is no longer detected
-   * @param {string} event - The event to listen to.
-   * @param {() => void} callback - A function that is executed when the event occurs.
-   * @url http://www.espruino.com/Reference#l_NRF_NFCoff
-   */
-  static on(event: "NFCoff", callback: () => void): void;
-
-  /**
-   * When NFC is started with `NRF.nfcStart`, this is fired when NFC data is
-   * received. It doesn't get called if NFC is started with `NRF.nfcURL` or
-   * `NRF.nfcRaw`
-   * @param {string} event - The event to listen to.
-   * @param {(arr: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
-   * * `arr` An ArrayBuffer containign the received data
-   * @url http://www.espruino.com/Reference#l_NRF_NFCrx
-   */
-  static on(event: "NFCrx", callback: (arr: any) => void): void;
-
-  /**
-   * If a device is connected to Espruino, disconnect from it.
-   * @url http://www.espruino.com/Reference#l_NRF_disconnect
-   */
-  static disconnect(): void;
-
-  /**
-   * Disable Bluetooth advertising and disconnect from any device that connected to
-   * Puck.js as a peripheral (this won't affect any devices that Puck.js initiated
-   * connections to).
-   * This makes Puck.js undiscoverable, so it can't be connected to.
-   * Use `NRF.wake()` to wake up and make Puck.js connectable again.
-   * @url http://www.espruino.com/Reference#l_NRF_sleep
-   */
-  static sleep(): void;
-
-  /**
-   * Enable Bluetooth advertising (this is enabled by default), which allows other
-   * devices to discover and connect to Puck.js.
-   * Use `NRF.sleep()` to disable advertising.
-   * @url http://www.espruino.com/Reference#l_NRF_wake
-   */
-  static wake(): void;
-
-  /**
-   * Restart the Bluetooth softdevice (if there is currently a BLE connection, it
-   * will queue a restart to be done when the connection closes).
-   * You shouldn't need to call this function in normal usage. However, Nordic's BLE
-   * softdevice has some settings that cannot be reset. For example there are only a
-   * certain number of unique UUIDs. Once these are all used the only option is to
-   * restart the softdevice to clear them all out.
-   *
-   * @param {any} [callback] - [optional] A function to be called while the softdevice is uninitialised. Use with caution - accessing console/bluetooth will almost certainly result in a crash.
-   * @url http://www.espruino.com/Reference#l_NRF_restart
-   */
-  static restart(callback?: any): void;
-
-  /**
-   * Delete all data stored for all peers (bonding data used for secure connections). This cannot be done
-   * while a connection is active, so if there is a connection it will be postponed until everything is disconnected
-   * (which can be done by calling `NRF.disconnect()` and waiting).
-   * Booting your device while holding all buttons down together should also have the same effect.
-   *
-   * @param {any} [callback] - [optional] A function to be called while the softdevice is uninitialised. Use with caution - accessing console/bluetooth will almost certainly result in a crash.
-   * @url http://www.espruino.com/Reference#l_NRF_eraseBonds
-   */
-  static eraseBonds(callback?: any): void;
-
-  /**
-   * Get this device's default or current Bluetooth MAC address.
-   * For Puck.js, the last 5 characters of this (e.g. `ee:ff`) are used in the
-   * device's advertised Bluetooth name.
-   *
-   * @param {boolean} current - If true, return the current address rather than the default
-   * @returns {any} MAC address - a string of the form 'aa:bb:cc:dd:ee:ff'
-   * @url http://www.espruino.com/Reference#l_NRF_getAddress
-   */
-  static getAddress(current: boolean): any;
-
-  /**
-   * Set this device's default Bluetooth MAC address:
-   * ```
-   * NRF.setAddress("ff:ee:dd:cc:bb:aa random");
-   * ```
-   * Addresses take the form:
-   * * `"ff:ee:dd:cc:bb:aa"` or `"ff:ee:dd:cc:bb:aa public"` for a public address
-   * * `"ff:ee:dd:cc:bb:aa random"` for a random static address (the default for
-   *   Espruino)
-   * This may throw a `INVALID_BLE_ADDR` error if the upper two bits of the address
-   * don't match the address type.
-   * To change the address, Espruino must restart the softdevice. It will only do so
-   * when it is disconnected from other devices.
-   *
-   * @param {any} addr - The address to use (as a string)
-   * @url http://www.espruino.com/Reference#l_NRF_setAddress
-   */
-  static setAddress(addr: any): void;
-
-  /**
-   * Try to resolve a **bonded** peer's address from a random private resolvable address. If the peer
-   * is not bonded, there will be no IRK and `undefined` will be returned.
-   * A bunch of devices, especially smartphones, implement address randomisation and periodically change
-   * their bluetooth address to prevent being tracked.
-   * If such a device uses a "random private resolvable address", that address is generated
-   * with the help of an identity resolving key (IRK) that is exchanged during bonding.
-   * If we know the IRK of a device, we can check if an address was potentially generated by that device.
-   * The following will check an address against the IRKs of all bonded devices,
-   * and return the actual address of a bonded device if the given address was likely generated using that device's IRK:
-   * ```
-   * NRF.on('connect',addr=> {
-   *   // addr could be "aa:bb:cc:dd:ee:ff private-resolvable"
-   *   if (addr.endsWith("private-resolvable")) {
-   *     let resolved = NRF.resolveAddress(addr);
-   *     // resolved is "aa:bb:cc:dd:ee:ff public"
-   *     if (resolved) addr = resolved;
-   *   }
-   *   console.log("Device connected: ", addr);
-   * })
-   * ```
-   * You can get the current connection's address using `NRF.getSecurityStatus().connected_addr`,
-   * so can for instance do `NRF.resolveAddress(NRF.getSecurityStatus().connected_addr)`.
-   *
-   * @param {any} options - The address that should be resolved.
-   * @returns {any} The resolved address, or `undefined` if it couldn't be resolved.
-   * @url http://www.espruino.com/Reference#l_NRF_resolveAddress
-   */
-  static resolveAddress(options: any): any;
-
-  /**
-   * Get the battery level in volts (the voltage that the NRF chip is running off
-   * of).
-   * This is the battery level of the device itself - it has nothing to with any
-   * device that might be connected.
-   * @returns {number} Battery level in volts
-   * @url http://www.espruino.com/Reference#l_NRF_getBattery
-   */
-  static getBattery(): number;
-
-  /**
-   * Change the data that Espruino advertises.
-   * Data can be of the form `{ UUID : data_as_byte_array }`. The UUID should be a
-   * [Bluetooth Service
-   * ID](https://developer.bluetooth.org/gatt/services/Pages/ServicesHome.aspx).
-   * For example to return battery level at 95%, do:
-   * ```
-   * NRF.setAdvertising({
-   *   0x180F : [95] // Service data 0x180F = 95
-   * });
-   * ```
-   * Or you could report the current temperature:
-   * ```
-   * setInterval(function() {
-   *   NRF.setAdvertising({
-   *     0x1809 : [Math.round(E.getTemperature())]
-   *   });
-   * }, 30000);
-   * ```
-   * If you specify a value for the object key, Service Data is advertised. However
-   * if you specify `undefined`, the Service UUID is advertised:
-   * ```
-   * NRF.setAdvertising({
-   *   0x180D : undefined // Advertise service UUID 0x180D (HRM)
-   * });
-   * ```
-   * Service UUIDs can also be supplied in the second argument of `NRF.setServices`,
-   * but those go in the scan response packet.
-   * You can also supply the raw advertising data in an array. For example to
-   * advertise as an Eddystone beacon:
-   * ```
-   * NRF.setAdvertising([0x03,  // Length of Service List
-   *   0x03,  // Param: Service List
-   *   0xAA, 0xFE,  // Eddystone ID
-   *   0x13,  // Length of Service Data
-   *   0x16,  // Service Data
-   *   0xAA, 0xFE, // Eddystone ID
-   *   0x10,  // Frame type: URL
-   *   0xF8, // Power
-   *   0x03, // https://
-   *   'g','o','o','.','g','l','/','B','3','J','0','O','c'],
-   *     {interval:100});
-   * ```
-   * (However for Eddystone we'd advise that you use the [Espruino Eddystone
-   * library](/Puck.js+Eddystone))
-   * **Note:** When specifying data as an array, certain advertising options such as
-   * `discoverable` and `showName` won't have any effect.
-   * **Note:** The size of Bluetooth LE advertising packets is limited to 31 bytes.
-   * If you want to advertise more data, consider using an array for `data` (See
-   * below), or `NRF.setScanResponse`.
-   * You can even specify an array of arrays or objects, in which case each
-   * advertising packet will be used in turn - for instance to make your device
-   * advertise battery level and its name as well as both Eddystone and iBeacon :
-   * ```
-   * NRF.setAdvertising([
-   *   {0x180F : [E.getBattery()]}, // normal advertising, with battery %
-   *   require("ble_ibeacon").get(...), // iBeacon
-   *   require("ble_eddystone").get(...), // eddystone
-   * ], {interval:300});
-   * ```
-   * `options` is an object, which can contain:
-   * ```
-   * {
-   *   name: "Hello"              // The name of the device
-   *   showName: true/false       // include full name, or nothing
-   *   discoverable: true/false   // general discoverable, or limited - default is limited
-   *   connectable: true/false    // whether device is connectable - default is true
-   *   scannable : true/false     // whether device can be scanned for scan response packets - default is true
-   *   whenConnected : true/false // keep advertising when connected (nRF52 only)
-   *                              // switches to advertising as non-connectable when it is connected
-   *   interval: 600              // Advertising interval in msec, between 20 and 10000 (default is 375ms)
-   *   manufacturer: 0x0590       // IF sending manufacturer data, this is the manufacturer ID
-   *   manufacturerData: [...]    // IF sending manufacturer data, this is an array of data
-   *   phy: "1mbps/2mbps/coded"   // (NRF52833/NRF52840 only) use the long-range coded phy for transmission (1mbps default)
-   * }
-   * ```
-   * Setting `connectable` and `scannable` to false gives the lowest power
-   * consumption as the BLE radio doesn't have to listen after sending advertising.
-   * **NOTE:** Non-`connectable` advertising can't have an advertising interval less
-   * than 100ms according to the BLE spec.
-   * So for instance to set the name of Puck.js without advertising any other data
-   * you can just use the command:
-   * ```
-   * NRF.setAdvertising({},{name:"Hello"});
-   * ```
-   * You can also specify 'manufacturer data', which is another form of advertising
-   * data. We've registered the Manufacturer ID 0x0590 (as Pur3 Ltd) for use with
-   * *Official Espruino devices* - use it to advertise whatever data you'd like, but
-   * we'd recommend using JSON.
-   * For example by not advertising a device name you can send up to 24 bytes of JSON
-   * on Espruino's manufacturer ID:
-   * ```
-   * var data = {a:1,b:2};
-   * NRF.setAdvertising({},{
-   *   showName:false,
-   *   manufacturer:0x0590,
-   *   manufacturerData:JSON.stringify(data)
-   * });
-   * ```
-   * If you're using [EspruinoHub](https://github.com/espruino/EspruinoHub) then it
-   * will automatically decode this into the following MQTT topics:
-   * * `/ble/advertise/ma:c_:_a:dd:re:ss/espruino` -> `{"a":10,"b":15}`
-   * * `/ble/advertise/ma:c_:_a:dd:re:ss/a` -> `1`
-   * * `/ble/advertise/ma:c_:_a:dd:re:ss/b` -> `2`
-   * Note that **you only have 24 characters available for JSON**, so try to use the
-   * shortest field names possible and avoid floating point values that can be very
-   * long when converted to a String.
-   *
-   * @param {any} data - The service data to advertise as an object - see below for more info
-   * @param {any} [options] - [optional] Object of options
-   * @url http://www.espruino.com/Reference#l_NRF_setAdvertising
-   */
-  static setAdvertising(data: any, options?: any): void;
-
-  /**
-   * This is just like `NRF.setAdvertising`, except instead of advertising the data,
-   * it returns the packet that would be advertised as an array.
-   *
-   * @param {any} data - The data to advertise as an object
-   * @param {any} [options] - [optional] An object of options
-   * @returns {any} An array containing the advertising data
-   * @url http://www.espruino.com/Reference#l_NRF_getAdvertisingData
-   */
-  static getAdvertisingData(data: any, options?: any): any;
-
-  /**
-   * The raw scan response data should be supplied as an array. For example to return
-   * "Sample" for the device name:
-   * ```
-   * NRF.setScanResponse([0x07,  // Length of Data
-   *   0x09,  // Param: Complete Local Name
-   *   'S', 'a', 'm', 'p', 'l', 'e']);
-   * ```
-   * **Note:** `NRF.setServices(..., {advertise:[ ... ]})` writes advertised services
-   * into the scan response - so you can't use both `advertise` and `NRF.setServices`
-   * or one will overwrite the other.
-   *
-   * @param {any} data - The data to for the scan response
-   * @url http://www.espruino.com/Reference#l_NRF_setScanResponse
-   */
-  static setScanResponse(data: any): void;
-
-  /**
-   * Change the services and characteristics Espruino advertises.
-   * If you want to **change** the value of a characteristic, you need to use
-   * `NRF.updateServices()` instead
-   * To expose some information on Characteristic `ABCD` on service `BCDE` you could
-   * do:
-   * ```
-   * NRF.setServices({
-   *   0xBCDE : {
-   *     0xABCD : {
-   *       value : "Hello",
-   *       readable : true
-   *     }
-   *   }
-   * });
-   * ```
-   * Or to allow the 3 LEDs to be controlled by writing numbers 0 to 7 to a
-   * characteristic, you can do the following. `evt.data` is an ArrayBuffer.
-   * ```
-   * NRF.setServices({
-   *   0xBCDE : {
-   *     0xABCD : {
-   *       writable : true,
-   *       onWrite : function(evt) {
-   *         digitalWrite([LED3,LED2,LED1], evt.data[0]);
-   *       }
-   *     }
-   *   }
-   * });
-   * ```
-   * You can supply many different options:
-   * ```
-   * NRF.setServices({
-   *   0xBCDE : {
-   *     0xABCD : {
-   *       value : "Hello", // optional
-   *       maxLen : 5, // optional (otherwise is length of initial value)
-   *       broadcast : false, // optional, default is false
-   *       readable : true,   // optional, default is false
-   *       writable : true,   // optional, default is false
-   *       notify : true,   // optional, default is false
-   *       indicate : true,   // optional, default is false
-   *       description: "My Characteristic",  // optional, default is null,
-   *       security: { // optional - see NRF.setSecurity
-   *         read: { // optional
-   *           encrypted: false, // optional, default is false
-   *           mitm: false, // optional, default is false
-   *           lesc: false, // optional, default is false
-   *           signed: false // optional, default is false
-   *         },
-   *         write: { // optional
-   *           encrypted: true, // optional, default is false
-   *           mitm: false, // optional, default is false
-   *           lesc: false, // optional, default is false
-   *           signed: false // optional, default is false
-   *         }
-   *       },
-   *       onWrite : function(evt) { // optional
-   *         console.log("Got ", evt.data); // an ArrayBuffer
-   *       },
-   *       onWriteDesc : function(evt) { // optional - called when the 'cccd' descriptor is written
-   *         // for example this is called when notifications are requested by the client:
-   *         console.log("Notifications enabled = ", evt.data[0]&1);
-   *       }
-   *     }
-   *     // more characteristics allowed
-   *   }
-   *   // more services allowed
-   * });
-   * ```
-   * **Note:** UUIDs can be integers between `0` and `0xFFFF`, strings of the form
-   * `"ABCD"`, or strings of the form `"ABCDABCD-ABCD-ABCD-ABCD-ABCDABCDABCD"`
-   * `options` can be of the form:
-   * ```
-   * NRF.setServices(undefined, {
-   *   hid : new Uint8Array(...), // optional, default is undefined. Enable BLE HID support
-   *   uart : true, // optional, default is true. Enable BLE UART support
-   *   advertise: [ '180D' ] // optional, list of service UUIDs to advertise
-   *   ancs : true, // optional, Bangle.js-only, enable Apple ANCS support for notifications (see `NRF.ancs*`)
-   *   ams : true // optional, Bangle.js-only, enable Apple AMS support for media control (see `NRF.ams*`)
-   *   cts : true // optional, Bangle.js-only, enable Apple Current Time Service support (see `NRF.ctsGetTime`)
-   * });
-   * ```
-   * To enable BLE HID, you must set `hid` to an array which is the BLE report
-   * descriptor. The easiest way to do this is to use the `ble_hid_controls` or
-   * `ble_hid_keyboard` modules.
-   * **Note:** Just creating a service doesn't mean that the service will be
-   * advertised. It will only be available after a device connects. To advertise,
-   * specify the UUIDs you wish to advertise in the `advertise` field of the second
-   * `options` argument. For example this will create and advertise a heart rate
-   * service:
-   * ```
-   * NRF.setServices({
-   *   0x180D: { // heart_rate
-   *     0x2A37: { // heart_rate_measurement
-   *       notify: true,
-   *       value : [0x06, heartrate],
-   *     }
-   *   }
-   * }, { advertise: [ '180D' ] });
-   * ```
-   * You may specify 128 bit UUIDs to advertise, however you may get a `DATA_SIZE`
-   * exception because there is insufficient space in the Bluetooth LE advertising
-   * packet for the 128 bit UART UUID as well as the UUID you specified. In this case
-   * you can add `uart:false` after the `advertise` element to disable the UART,
-   * however you then be unable to connect to Puck.js's console via Bluetooth.
-   * If you absolutely require two or more 128 bit UUIDs then you will have to
-   * specify your own raw advertising data packets with `NRF.setAdvertising`
-   * **Note:** The services on Espruino can only be modified when there is no device
-   * connected to it as it requires a restart of the Bluetooth stack. **iOS devices
-   * will 'cache' the list of services** so apps like NRF Connect may incorrectly
-   * display the old services even after you have modified them. To fix this, disable
-   * and re-enable Bluetooth on your iOS device, or use an Android device to run NRF
-   * Connect.
-   * **Note:** Not all combinations of security configuration values are valid, the
-   * valid combinations are: encrypted, encrypted + mitm, lesc, signed, signed +
-   * mitm. See `NRF.setSecurity` for more information.
-   *
-   * @param {any} data - The service (and characteristics) to advertise
-   * @param {any} [options] - [optional] Object containing options
-   * @url http://www.espruino.com/Reference#l_NRF_setServices
-   */
-  static setServices(data: { [key: number]: { [key: number]: { value?: string, maxLen?: number, broadcast?: boolean, readable?: boolean, writable?: boolean, notify?: boolean, indicate?: boolean, description?: string, security?: { read?: { encrypted?: boolean, mitm?: boolean, lesc?: boolean, signed?: boolean }, write?: { encrypted?: boolean, mitm?: boolean, lesc?: boolean, signed?: boolean } }, onWrite?: (evt: { data: ArrayBuffer }) => void } } }, options?: any): void;
-
-  /**
-   * Update values for the services and characteristics Espruino advertises. Only
-   * services and characteristics previously declared using `NRF.setServices` are
-   * affected.
-   * To update the '0xABCD' characteristic in the '0xBCDE' service:
-   * ```
-   * NRF.updateServices({
-   *   0xBCDE : {
-   *     0xABCD : {
-   *       value : "World"
-   *     }
-   *   }
-   * });
-   * ```
-   * You can also use 128 bit UUIDs, for example
-   * `"b7920001-3c1b-4b40-869f-3c0db9be80c6"`.
-   * To define a service and characteristic and then notify connected clients of a
-   * change to it when a button is pressed:
-   * ```
-   * NRF.setServices({
-   *   0xBCDE : {
-   *     0xABCD : {
-   *       value : "Hello",
-   *       maxLen : 20,
-   *       notify: true
-   *     }
-   *   }
-   * });
-   * setWatch(function() {
-   *   NRF.updateServices({
-   *     0xBCDE : {
-   *       0xABCD : {
-   *         value : "World!",
-   *         notify: true
-   *       }
-   *     }
-   *   });
-   * }, BTN, { repeat:true, edge:"rising", debounce: 50 });
-   * ```
-   * This only works if the characteristic was created with `notify: true` using
-   * `NRF.setServices`, otherwise the characteristic will be updated but no
-   * notification will be sent.
-   * Also note that `maxLen` was specified. If it wasn't then the maximum length of
-   * the characteristic would have been 5 - the length of `"Hello"`.
-   * To indicate (i.e. notify with ACK) connected clients of a change to the '0xABCD'
-   * characteristic in the '0xBCDE' service:
-   * ```
-   * NRF.updateServices({
-   *   0xBCDE : {
-   *     0xABCD : {
-   *       value : "World",
-   *       indicate: true
-   *     }
-   *   }
-   * });
-   * ```
-   * This only works if the characteristic was created with `indicate: true` using
-   * `NRF.setServices`, otherwise the characteristic will be updated but no
-   * notification will be sent.
-   * **Note:** See `NRF.setServices` for more information
-   *
-   * @param {any} data - The service (and characteristics) to update
-   * @url http://www.espruino.com/Reference#l_NRF_updateServices
-   */
-  static updateServices(data: any): void;
-
-  /**
-   * Start/stop listening for BLE advertising packets within range. Returns a
-   * `BluetoothDevice` for each advertising packet. **By default this is not an active
-   * scan, so Scan Response advertising data is not included (see below)**
-   * ```
-   * // Start scanning
-   * packets=10;
-   * NRF.setScan(function(d) {
-   *   packets--;
-   *   if (packets<=0)
-   *     NRF.setScan(); // stop scanning
-   *   else
-   *     console.log(d); // print packet info
-   * });
-   * ```
-   * Each `BluetoothDevice` will look a bit like:
-   * ```
-   * BluetoothDevice {
-   *   "id": "aa:bb:cc:dd:ee:ff", // address
-   *   "rssi": -89,               // signal strength
-   *   "services": [ "128bit-uuid", ... ],     // zero or more service UUIDs
-   *   "data": new Uint8Array([ ... ]).buffer, // ArrayBuffer of returned data
-   *   "serviceData" : { "0123" : [ 1 ] }, // if service data is in 'data', it's extracted here
-   *   "manufacturer" : 0x1234, // if manufacturer data is in 'data', the 16 bit manufacturer ID is extracted here
-   *   "manufacturerData" : new Uint8Array([...]).buffer, // if manufacturer data is in 'data', the data is extracted here as an ArrayBuffer
-   *   "name": "DeviceName"       // the advertised device name
-   *  }
-   * ```
-   * You can also supply a set of filters (as described in `NRF.requestDevice`) as a
-   * second argument, which will allow you to filter the devices you get a callback
-   * for. This helps to cut down on the time spent processing JavaScript code in
-   * areas with a lot of Bluetooth advertisements. For example to find only devices
-   * with the manufacturer data `0x0590` (Espruino's ID) you could do:
-   * ```
-   * NRF.setScan(function(d) {
-   *   console.log(d.manufacturerData);
-   * }, { filters: [{ manufacturerData:{0x0590:{}} }] });
-   * ```
-   * You can also specify `active:true` in the second argument to perform active
-   * scanning (this requests scan response packets) from any devices it finds.
-   * **Note:** Using a filter in `setScan` filters each advertising packet
-   * individually. As a result, if you filter based on a service UUID and a device
-   * advertises with multiple packets (or a scan response when `active:true`) only
-   * the packets matching the filter are returned. To aggregate multiple packets you
-   * can use `NRF.findDevices`.
-   * **Note:** BLE advertising packets can arrive quickly - faster than you'll be
-   * able to print them to the console. It's best only to print a few, or to use a
-   * function like `NRF.findDevices(..)` which will collate a list of available
-   * devices.
-   * **Note:** Using setScan turns the radio's receive mode on constantly. This can
-   * draw a *lot* of power (12mA or so), so you should use it sparingly or you can
-   * run your battery down quickly.
-   *
-   * @param {any} callback - The callback to call with received advertising packets, or undefined to stop
-   * @param {any} [options] - [optional] An object `{filters: ...}` (as would be passed to `NRF.requestDevice`) to filter devices by
-   * @url http://www.espruino.com/Reference#l_NRF_setScan
-   */
-  static setScan(callback: any, options?: any): void;
-
-  /**
-   * This function can be used to quickly filter through Bluetooth devices.
-   * For instance if you wish to scan for multiple different types of device at the
-   * same time then you could use `NRF.findDevices` with all the filters you're
-   * interested in. When scanning is finished you can then use `NRF.filterDevices` to
-   * pick out just the devices of interest.
-   * ```
-   * // the two types of device we're interested in
-   * var filter1 = [{serviceData:{"fe95":{}}}];
-   * var filter2 = [{namePrefix:"Pixl.js"}];
-   * // the following filter will return both types of device
-   * var allFilters = filter1.concat(filter2);
-   * // now scan for both types of device, and filter them out afterwards
-   * NRF.findDevices(function(devices) {
-   *   var devices1 = NRF.filterDevices(devices, filter1);
-   *   var devices2 = NRF.filterDevices(devices, filter2);
-   *   // ...
-   * }, {filters : allFilters});
-   * ```
-   *
-   * @param {any} devices - An array of `BluetoothDevice` objects, from `NRF.findDevices` or similar
-   * @param {any} filters - A list of filters (as would be passed to `NRF.requestDevice`) to filter devices by
-   * @returns {any} An array of `BluetoothDevice` objects that match the given filters
-   * @url http://www.espruino.com/Reference#l_NRF_filterDevices
-   */
-  static filterDevices(devices: any, filters: any): any;
-
-  /**
-   * Utility function to return a list of BLE devices detected in range. Behind the
-   * scenes, this uses `NRF.setScan(...)` and collates the results.
-   * ```
-   * NRF.findDevices(function(devices) {
-   *   console.log(devices);
-   * }, 1000);
-   * ```
-   * prints something like:
-   * ```
-   * [
-   *   BluetoothDevice {
-   *     "id" : "e7:e0:57:ad:36:a2 random",
-   *     "rssi": -45,
-   *     "services": [ "4567" ],
-   *     "serviceData" : { "0123" : [ 1 ] },
-   *     "manufacturer" : 1424,
-   *     "manufacturerData" : new Uint8Array([ ... ]).buffer,
-   *     "data": new ArrayBuffer([ ... ]).buffer,
-   *     "name": "Puck.js 36a2"
-   *    },
-   *   BluetoothDevice {
-   *     "id": "c0:52:3f:50:42:c9 random",
-   *     "rssi": -65,
-   *     "data": new ArrayBuffer([ ... ]),
-   *     "name": "Puck.js 8f57"
-   *    }
-   *  ]
-   * ```
-   * For more information on the structure returned, see `NRF.setScan`.
-   * If you want to scan only for specific devices you can replace the timeout with
-   * an object of the form `{filters: ..., timeout : ..., active: bool}` using the
-   * filters described in `NRF.requestDevice`. For example to search for devices with
-   * Espruino's `manufacturerData`:
-   * ```
-   * NRF.findDevices(function(devices) {
-   *   ...
-   * }, {timeout : 2000, filters : [{ manufacturerData:{0x0590:{}} }] });
-   * ```
-   * You could then use
-   * [`BluetoothDevice.gatt.connect(...)`](/Reference#l_BluetoothRemoteGATTServer_connect)
-   * on the device returned to make a connection.
-   * You can also use [`NRF.connect(...)`](/Reference#l_NRF_connect) on just the `id`
-   * string returned, which may be useful if you always want to connect to a specific
-   * device.
-   * **Note:** Using findDevices turns the radio's receive mode on for 2000ms (or
-   * however long you specify). This can draw a *lot* of power (12mA or so), so you
-   * should use it sparingly or you can run your battery down quickly.
-   * **Note:** The 'data' field contains the data of *the last packet received*.
-   * There may have been more packets. To get data for each packet individually use
-   * `NRF.setScan` instead.
-   *
-   * @param {any} callback - The callback to call with received advertising packets (as `BluetoothDevice`), or undefined to stop
-   * @param {any} [options] - [optional] A time in milliseconds to scan for (defaults to 2000), Or an optional object `{filters: ..., timeout : ..., active: bool}` (as would be passed to `NRF.requestDevice`) to filter devices by
-   * @url http://www.espruino.com/Reference#l_NRF_findDevices
-   */
-  static findDevices(callback: (devices: BluetoothDevice[]) => void, options?: number | { filters?: NRFFilters[], timeout?: number, active?: boolean }): void;
-
-  /**
-   * Start/stop listening for RSSI values on the currently active connection (where
-   * This device is a peripheral and is being connected to by a 'central' device)
-   * ```
-   * // Start scanning
-   * NRF.setRSSIHandler(function(rssi) {
-   *   console.log(rssi); // prints -85 (or similar)
-   * });
-   * // Stop Scanning
-   * NRF.setRSSIHandler();
-   * ```
-   * RSSI is the 'Received Signal Strength Indication' in dBm
-   *
-   * @param {any} callback - The callback to call with the RSSI value, or undefined to stop
-   * @url http://www.espruino.com/Reference#l_NRF_setRSSIHandler
-   */
-  static setRSSIHandler(callback: any): void;
-
-  /**
-   * Set the BLE radio transmit power. The default TX power is 0 dBm, and
-   *
-   * @param {number} power - Transmit power. Accepted values are -40(nRF52 only), -30(nRF51 only), -20, -16, -12, -8, -4, 0, and 4 dBm. On nRF52840 (eg Bangle.js 2) 5/6/7/8 dBm are available too. Others will give an error code.
-   * @url http://www.espruino.com/Reference#l_NRF_setTxPower
-   */
-  static setTxPower(power: number): void;
-
-  /**
-   * **THIS IS DEPRECATED** - please use `NRF.setConnectionInterval` for peripheral
-   * and `NRF.connect(addr, options)`/`BluetoothRemoteGATTServer.connect(options)`
-   * for central connections.
-   * This sets the connection parameters - these affect the transfer speed and power
-   * usage when the device is connected.
-   * * When not low power, the connection interval is between 7.5 and 20ms
-   * * When low power, the connection interval is between 500 and 1000ms
-   * When low power connection is enabled, transfers of data over Bluetooth will be
-   * very slow, however power usage while connected will be drastically decreased.
-   * This will only take effect after the connection is disconnected and
-   * re-established.
-   *
-   * @param {boolean} lowPower - Whether the connection is low power or not
-   * @url http://www.espruino.com/Reference#l_NRF_setLowPowerConnection
-   */
-  static setLowPowerConnection(lowPower: boolean): void;
-
-  /**
-   * Enables NFC and starts advertising the given URL. For example:
-   * ```
-   * NRF.nfcURL("http://espruino.com");
-   * ```
-   *
-   * @param {any} url - The URL string to expose on NFC, or `undefined` to disable NFC
-   * @url http://www.espruino.com/Reference#l_NRF_nfcURL
-   */
-  static nfcURL(url: any): void;
-
-  /**
-   * Enables NFC and with an out of band 16 byte pairing key.
-   * For example the following will enable out of band pairing on BLE such that the
-   * device will pair when you tap the phone against it:
-   * ```
-   * var bleKey = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00];
-   * NRF.on('security',s=>print("security",JSON.stringify(s)));
-   * NRF.nfcPair(bleKey);
-   * NRF.setSecurity({oob:bleKey, mitm:true});
-   * ```
-   *
-   * @param {any} key - 16 byte out of band key
-   * @url http://www.espruino.com/Reference#l_NRF_nfcPair
-   */
-  static nfcPair(key: any): void;
-
-  /**
-   * Enables NFC with a record that will launch the given android app.
-   * For example:
-   * ```
-   * NRF.nfcAndroidApp("no.nordicsemi.android.nrftoolbox")
-   * ```
-   *
-   * @param {any} app - The unique identifier of the given Android App
-   * @url http://www.espruino.com/Reference#l_NRF_nfcAndroidApp
-   */
-  static nfcAndroidApp(app: any): void;
-
-  /**
-   * Enables NFC and starts advertising with Raw data. For example:
-   * ```
-   * NRF.nfcRaw(new Uint8Array([193, 1, 0, 0, 0, 13, 85, 3, 101, 115, 112, 114, 117, 105, 110, 111, 46, 99, 111, 109]));
-   * // same as NRF.nfcURL("http://espruino.com");
-   * ```
-   *
-   * @param {any} payload - The NFC NDEF message to deliver to the reader
-   * @url http://www.espruino.com/Reference#l_NRF_nfcRaw
-   */
-  static nfcRaw(payload: any): void;
-
-  /**
-   * **Advanced NFC Functionality.** If you just want to advertise a URL, use
-   * `NRF.nfcURL` instead.
-   * Enables NFC and starts advertising. `NFCrx` events will be fired when data is
-   * received.
-   * ```
-   * NRF.nfcStart();
-   * ```
-   *
-   * @param {any} payload - Optional 7 byte UID
-   * @returns {any} Internal tag memory (first 10 bytes of tag data)
-   * @url http://www.espruino.com/Reference#l_NRF_nfcStart
-   */
-  static nfcStart(payload: any): any;
-
-  /**
-   * **Advanced NFC Functionality.** If you just want to advertise a URL, use
-   * `NRF.nfcURL` instead.
-   * Disables NFC.
-   * ```
-   * NRF.nfcStop();
-   * ```
-   *
-   * @url http://www.espruino.com/Reference#l_NRF_nfcStop
-   */
-  static nfcStop(): void;
-
-  /**
-   * **Advanced NFC Functionality.** If you just want to advertise a URL, use
-   * `NRF.nfcURL` instead.
-   * Acknowledges the last frame and optionally transmits a response. If payload is
-   * an array, then a array.length byte nfc frame is sent. If payload is a int, then
-   * a 4bit ACK/NACK is sent. **Note:** ```nfcSend``` should always be called after
-   * an ```NFCrx``` event.
-   * ```
-   * NRF.nfcSend(new Uint8Array([0x01, 0x02, ...]));
-   * // or
-   * NRF.nfcSend(0x0A);
-   * // or
-   * NRF.nfcSend();
-   * ```
-   *
-   * @param {any} payload - Optional tx data
-   * @url http://www.espruino.com/Reference#l_NRF_nfcSend
-   */
-  static nfcSend(payload: any): void;
-
-  /**
-   * Send a USB HID report. HID must first be enabled with `NRF.setServices({}, {hid:
-   * hid_report})`
-   *
-   * @param {any} data - Input report data as an array
-   * @param {any} callback - A callback function to be called when the data is sent
-   * @url http://www.espruino.com/Reference#l_NRF_sendHIDReport
-   */
-  static sendHIDReport(data: number[], callback?: () => void): void
-
-  /**
-   * Check if Apple Notification Center Service (ANCS) is currently active on the BLE
-   * connection
-   *
-   * @returns {boolean} True if Apple Notification Center Service (ANCS) has been initialised and is active
-   * @url http://www.espruino.com/Reference#l_NRF_ancsIsActive
-   */
-  static ancsIsActive(): boolean;
-
-  /**
-   * Send an ANCS action for a specific Notification UID. Corresponds to
-   * posaction/negaction in the 'ANCS' event that was received
-   *
-   * @param {number} uid - The UID of the notification to respond to
-   * @param {boolean} positive - `true` for positive action, `false` for negative
-   * @url http://www.espruino.com/Reference#l_NRF_ancsAction
-   */
-  static ancsAction(uid: number, positive: boolean): void;
-
-  /**
-   * Get ANCS info for a notification event received via `E.ANCS`, e.g.:
-   * ```
-   * E.on('ANCS', event => {
-   *   NRF.ancsGetNotificationInfo( event.uid ).then(a=>print("Notify",E.toJS(a)));
-   * });
-   * ```
-   * Returns:
-   * ```
-   * {
-   *   "uid" : integer,
-   *   "appId": string,
-   *   "title": string,
-   *   "subtitle": string,
-   *   "message": string,
-   *   "messageSize": string,
-   *   "date": string,
-   *   "posAction": string,
-   *   "negAction": string
-   * }
-   * ```
-   *
-   * @param {number} uid - The UID of the notification to get information for
-   * @returns {any} A `Promise` that is resolved (or rejected) when the connection is complete
-   * @url http://www.espruino.com/Reference#l_NRF_ancsGetNotificationInfo
-   */
-  static ancsGetNotificationInfo(uid: number): Promise<void>;
-
-  /**
-   * Get ANCS info for an app (app id is available via `NRF.ancsGetNotificationInfo`)
-   * Promise returns:
-   * ```
-   * {
-   *   "uid" : int,
-   *   "appId" : string,
-   *   "title" : string,
-   *   "subtitle" : string,
-   *   "message" : string,
-   *   "messageSize" : string,
-   *   "date" : string,
-   *   "posAction" : string,
-   *   "negAction" : string,
-   *   "name" : string,
-   * }
-   * ```
-   *
-   * @param {any} id - The app ID to get information for
-   * @returns {any} A `Promise` that is resolved (or rejected) when the connection is complete
-   * @url http://www.espruino.com/Reference#l_NRF_ancsGetAppInfo
-   */
-  static ancsGetAppInfo(id: any): Promise<void>;
-
-  /**
-   * Check if Apple Media Service (AMS) is currently active on the BLE connection
-   *
-   * @returns {boolean} True if Apple Media Service (AMS) has been initialised and is active
-   * @url http://www.espruino.com/Reference#l_NRF_amsIsActive
-   */
-  static amsIsActive(): boolean;
-
-  /**
-   * Get Apple Media Service (AMS) info for the current media player. "playbackinfo"
-   * returns a concatenation of three comma-separated values:
-   * - PlaybackState: a string that represents the integer value of the playback
-   *   state:
-   *     - PlaybackStatePaused = 0
-   *     - PlaybackStatePlaying = 1
-   *     - PlaybackStateRewinding = 2
-   *     - PlaybackStateFastForwarding = 3
-   * - PlaybackRate: a string that represents the floating point value of the
-   *   playback rate.
-   * - ElapsedTime: a string that represents the floating point value of the elapsed
-   *   time of the current track, in seconds
-   *
-   * @param {any} id - Either 'name', 'playbackinfo' or 'volume'
-   * @returns {any} A `Promise` that is resolved (or rejected) when the connection is complete
-   * @url http://www.espruino.com/Reference#l_NRF_amsGetPlayerInfo
-   */
-  static amsGetPlayerInfo(id: any): Promise<void>;
-
-  /**
-   * Get Apple Media Service (AMS) info for the currently-playing track
-   *
-   * @param {any} id - Either 'artist', 'album', 'title' or 'duration'
-   * @returns {any} A `Promise` that is resolved (or rejected) when the connection is complete
-   * @url http://www.espruino.com/Reference#l_NRF_amsGetTrackInfo
-   */
-  static amsGetTrackInfo(id: any): Promise<void>;
-
-  /**
-   * Send an AMS command to an Apple Media Service device to control music playback
-   * Command is one of play, pause, playpause, next, prev, volup, voldown, repeat,
-   * shuffle, skipforward, skipback, like, dislike, bookmark
-   *
-   * @param {any} id - For example, 'play', 'pause', 'volup' or 'voldown'
-   * @url http://www.espruino.com/Reference#l_NRF_amsCommand
-   */
-  static amsCommand(id: any): void;
-
-  /**
-   * Check if Apple Current Time Service (CTS) is currently active on the BLE connection
-   *
-   * @returns {boolean} True if Apple Current Time Service (CTS) has been initialised and is active
-   * @url http://www.espruino.com/Reference#l_NRF_ctsIsActive
-   */
-  static ctsIsActive(): boolean;
-
-  /**
-   * Returns time information from the Current Time Service
-   * (if requested with `NRF.ctsGetTime` and is activated by calling `NRF.setServices(..., {..., cts:true})`)
-   * ```
-   * {
-   *   date : // Date object with the current date
-   *   day :  // if known, 0=sun,1=mon (matches JS `Date`)
-   *   reason : [ // reason for the date change
-   *       "external", // External time change
-   *       "manual",   // Manual update
-   *       "timezone", // Timezone changed
-   *       "DST",      // Daylight savings
-   *     ]
-   *   timezone // if LTI characteristic exists, this is the timezone
-   *   dst      // if LTI characteristic exists, this is the dst adjustment
-   * }
-   * ```
-   * For instance this can be used as follows to update Espruino's time:
-   * ```
-   * E.on('CTS',e=>{
-   *   setTime(e.date.getTime()/1000);
-   * });
-   * NRF.ctsGetTime(); // also returns a promise with CTS info
-   * ```
-   * @param {string} event - The event to listen to.
-   * @param {(info: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
-   * * `info` An object (see below)
-   * @url http://www.espruino.com/Reference#l_NRF_CTS
-   */
-  static on(event: "CTS", callback: (info: any) => void): void;
-
-  /**
-   * Read the time from CTS - creates an `NRF.on('CTS', ...)` event as well
-   * ```
-   * NRF.ctsGetTime(); // also returns a promise
-   * ```
-   * @returns {any} A `Promise` that is resolved (or rejected) when time is received
-   * @url http://www.espruino.com/Reference#l_NRF_ctsGetTime
-   */
-  static ctsGetTime(): Promise<void>;
-
-  /**
-   * Search for available devices matching the given filters. Since we have no UI
-   * here, Espruino will pick the FIRST device it finds, or it'll call `catch`.
-   * `options` can have the following fields:
-   * * `filters` - a list of filters that a device must match before it is returned
-   *   (see below)
-   * * `timeout` - the maximum time to scan for in milliseconds (scanning stops when
-   * a match is found. e.g. `NRF.requestDevice({ timeout:2000, filters: [ ... ] })`
-   * * `active` - whether to perform active scanning (requesting 'scan response'
-   * packets from any devices that are found). e.g. `NRF.requestDevice({ active:true,
-   * filters: [ ... ] })`
-   * * `phy` - (NRF52833/NRF52840 only) the type of Bluetooth signals to scan for (can
-   *   be `"1mbps/coded/both/2mbps"`)
-   *   * `1mbps` (default) - standard Bluetooth LE advertising
-   *   * `coded` - long range
-   *   * `both` - standard and long range
-   *   * `2mbps` - high speed 2mbps (not working)
-   * * `extended` - (NRF52833/NRF52840 only) support receiving extended-length advertising
-   *   packets (default=true if phy isn't `"1mbps"`)
-   * * `extended` - (NRF52833/NRF52840 only) support receiving extended-length advertising
-   *   packets (default=true if phy isn't `"1mbps"`)
-   * * `window` - (2v22+) how long we scan for in milliseconds (default 100ms)
-   * * `interval` - (2v22+) how often we scan in milliseconds (default 100ms) - `window=interval=100`(default) is all the time. When
-   * scanning on both `1mbps` and `coded`, `interval` needs to be twice `window`.
-   * **NOTE:** `timeout` and `active` are not part of the Web Bluetooth standard.
-   * The following filter types are implemented:
-   * * `services` - list of services as strings (all of which must match). 128 bit
-   *   services must be in the form '01230123-0123-0123-0123-012301230123'
-   * * `name` - exact device name
-   * * `namePrefix` - starting characters of device name
-   * * `id` - exact device address (`id:"e9:53:86:09:89:99 random"`) (this is
-   *   Espruino-specific, and is not part of the Web Bluetooth spec)
-   * * `serviceData` - an object containing service characteristics which must all
-   *   match (`serviceData:{"1809":{}}`). Matching of actual service data is not
-   *   supported yet.
-   * * `manufacturerData` - an object containing manufacturer UUIDs which must all
-   *   match (`manufacturerData:{0x0590:{}}`). Matching of actual manufacturer data
-   *   is not supported yet.
-   * ```
-   * NRF.requestDevice({ filters: [{ namePrefix: 'Puck.js' }] }).then(function(device) { ... });
-   * // or
-   * NRF.requestDevice({ filters: [{ services: ['1823'] }] }).then(function(device) { ... });
-   * // or
-   * NRF.requestDevice({ filters: [{ manufacturerData:{0x0590:{}} }] }).then(function(device) { ... });
-   * ```
-   * As a full example, to send data to another Puck.js to turn an LED on:
-   * ```
-   * var gatt;
-   * NRF.requestDevice({ filters: [{ namePrefix: 'Puck.js' }] }).then(function(device) {
-   *   return device.gatt.connect();
-   * }).then(function(g) {
-   *   gatt = g;
-   *   return gatt.getPrimaryService("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
-   * }).then(function(service) {
-   *   return service.getCharacteristic("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
-   * }).then(function(characteristic) {
-   *   return characteristic.writeValue("LED1.set()\n");
-   * }).then(function() {
-   *   gatt.disconnect();
-   *   console.log("Done!");
-   * });
-   * ```
-   * Or slightly more concisely, using ES6 arrow functions:
-   * ```
-   * var gatt;
-   * NRF.requestDevice({ filters: [{ namePrefix: 'Puck.js' }]}).then(
-   *   device => device.gatt.connect()).then(
-   *   g => (gatt=g).getPrimaryService("6e400001-b5a3-f393-e0a9-e50e24dcca9e")).then(
-   *   service => service.getCharacteristic("6e400002-b5a3-f393-e0a9-e50e24dcca9e")).then(
-   *   characteristic => characteristic.writeValue("LED1.reset()\n")).then(
-   *   () => { gatt.disconnect(); console.log("Done!"); } );
-   * ```
-   * Note that you have to keep track of the `gatt` variable so that you can
-   * disconnect the Bluetooth connection when you're done.
-   * **Note:** Using a filter in `NRF.requestDevice` filters each advertising packet
-   * individually. As soon as a matching advertisement is received,
-   * `NRF.requestDevice` resolves the promise and stops scanning. This means that if
-   * you filter based on a service UUID and a device advertises with multiple packets
-   * (or a scan response when `active:true`) only the packet matching the filter is
-   * returned - you may not get the device's name is that was in a separate packet.
-   * To aggregate multiple packets you can use `NRF.findDevices`.
-   *
-   * @param {any} options - Options used to filter the device to use
-   * @returns {any} A `Promise` that is resolved (or rejected) when the connection is complete
-   * @url http://www.espruino.com/Reference#l_NRF_requestDevice
-   */
-  static requestDevice(options?: { filters?: NRFFilters[], timeout?: number, active?: boolean, phy?: string, extended?: boolean }): Promise<any>;
-
-  /**
-   * Connect to a BLE device by MAC address. Returns a promise, the argument of which
-   * is the `BluetoothRemoteGATTServer` connection.
-   * ```
-   * NRF.connect("aa:bb:cc:dd:ee").then(function(server) {
-   *   // ...
-   * });
-   * ```
-   * This has the same effect as calling `BluetoothDevice.gatt.connect` on a
-   * `BluetoothDevice` requested using `NRF.requestDevice`. It just allows you to
-   * specify the address directly (without having to scan).
-   * You can use it as follows - this would connect to another Puck device and turn
-   * its LED on:
-   * ```
-   * var gatt;
-   * NRF.connect("aa:bb:cc:dd:ee random").then(function(g) {
-   *   gatt = g;
-   *   return gatt.getPrimaryService("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
-   * }).then(function(service) {
-   *   return service.getCharacteristic("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
-   * }).then(function(characteristic) {
-   *   return characteristic.writeValue("LED1.set()\n");
-   * }).then(function() {
-   *   gatt.disconnect();
-   *   console.log("Done!");
-   * });
-   * ```
-   * **Note:** Espruino Bluetooth devices use a type of BLE address known as 'random
-   * static', which is different to a 'public' address. To connect to an Espruino
-   * device you'll need to use an address string of the form `"aa:bb:cc:dd:ee
-   * random"` rather than just `"aa:bb:cc:dd:ee"`. If you scan for devices with
-   * `NRF.findDevices`/`NRF.setScan` then addresses are already reported in the
-   * correct format.
-   *
-   * @param {any} mac - The MAC address to connect to
-   * @param {any} options - (Espruino-specific) An object of connection options (see `BluetoothRemoteGATTServer.connect` for full details)
-   * @returns {any} A `Promise` that is resolved (or rejected) when the connection is complete
-   * @url http://www.espruino.com/Reference#l_NRF_connect
-   */
-  static connect(mac: any, options: any): Promise<void>;
-
-  /**
-   * If set to true, whenever a device bonds it will be added to the whitelist.
-   * When set to false, the whitelist is cleared and newly bonded devices will not be
-   * added to the whitelist.
-   * **Note:** This is remembered between `reset()`s but isn't remembered after
-   * power-on (you'll have to add it to `onInit()`.
-   *
-   * @param {boolean} whitelisting - Are we using a whitelist? (default false)
-   * @url http://www.espruino.com/Reference#l_NRF_setWhitelist
-   */
-  static setWhitelist(whitelisting: boolean): void;
-
-  /**
-   * When connected, Bluetooth LE devices communicate at a set interval. Lowering the
-   * interval (e.g. more packets/second) means a lower delay when sending data, higher
-   * bandwidth, but also more power consumption.
-   * By default, when connected as a peripheral Espruino automatically adjusts the
-   * connection interval. When connected it's as fast as possible (7.5ms) but when
-   * idle for over a minute it drops to 200ms. On continued activity (>1 BLE
-   * operation) the interval is raised to 7.5ms again.
-   * The options for `interval` are:
-   * * `undefined` / `"auto"` : (default) automatically adjust connection interval
-   * * `100` : set min and max connection interval to the same number (between 7.5ms
-   *   and 4000ms)
-   * * `{minInterval:20, maxInterval:100}` : set min and max connection interval as a
-   *   range
-   * This configuration is not remembered during a `save()` - you will have to re-set
-   * it via `onInit`.
-   * **Note:** If connecting to another device (as Central), you can use an extra
-   * argument to `NRF.connect` or `BluetoothRemoteGATTServer.connect` to specify a
-   * connection interval.
-   * **Note:** This overwrites any changes imposed by the deprecated
-   * `NRF.setLowPowerConnection`
-   *
-   * @param {any} interval - The connection interval to use (see below)
-   * @url http://www.espruino.com/Reference#l_NRF_setConnectionInterval
-   */
-  static setConnectionInterval(interval: any): void;
-
-  /**
-   * Sets the security options used when connecting/pairing. This applies to both
-   * central *and* peripheral mode.
-   * ```
-   * NRF.setSecurity({
-   *   display : bool  // default false, can this device display a passkey on a screen/etc?
-   *                   // - sent via the `BluetoothDevice.passkey` event
-   *   keyboard : bool // default false, can this device enter a passkey
-   *                   // - request sent via the `BluetoothDevice.passkeyRequest` event
-   *   pair : bool // default true, allow other devices to pair with this device
-   *   bond : bool // default true, Perform bonding
-   *               // This stores info from pairing in flash and allows reconnecting without having to pair each time
-   *   mitm : bool // default false, Man In The Middle protection
-   *   lesc : bool // default false, LE Secure Connections
-   *   passkey : // default "", or a 6 digit passkey to use (display must be true for this)
-   *   oob : [0..15] // if specified, Out Of Band pairing is enabled and
-   *                 // the 16 byte pairing code supplied here is used
-   *   encryptUart : bool // default false (unless oob or passkey specified)
-   *                      // This sets the BLE UART service such that it
-   *                      // is encrypted and can only be used from a paired connection
-   *   privacy : // default false, true to enable with (ideally sensible) defaults,
-   *             // or an object defining BLE privacy / random address options - see below for more info
-   *             // only available if Espruino was compiled with private address support (like for example on Bangle.js 2)
-   * });
-   * ```
-   * **NOTE:** Some combinations of arguments will cause an error. For example
-   * supplying a passkey without `display:1` is not allowed. If `display:1` is set
-   * you do not require a physical display, the user just needs to know the passkey
-   * you supplied.
-   * For instance, to require pairing and to specify a passkey, use:
-   * ```
-   * NRF.setSecurity({passkey:"123456", mitm:1, display:1});
-   * ```
-   * Or to require pairing and to display a PIN that the connecting device
-   * provides, use:
-   * ```
-   * NRF.setSecurity({mitm:1, display:1});
-   * NRF.on("passkey", key => print("Enter PIN: ", key));
-   * ```
-   * However, while most devices will request a passkey for pairing at this point it
-   * is still possible for a device to connect without requiring one (e.g. using the
-   * 'NRF Connect' app).
-   * To force a passkey you need to protect each characteristic you define with
-   * `NRF.setSecurity`. For instance the following code will *require* that the
-   * passkey `123456` is entered before the characteristic
-   * `9d020002-bf5f-1d1a-b52a-fe52091d5b12` can be read.
-   * ```
-   * NRF.setSecurity({passkey:"123456", mitm:1, display:1});
-   * NRF.setServices({
-   *   "9d020001-bf5f-1d1a-b52a-fe52091d5b12" : {
-   *     "9d020002-bf5f-1d1a-b52a-fe52091d5b12" : {
-   *       // readable always
-   *       value : "Not Secret"
-   *     },
-   *     "9d020003-bf5f-1d1a-b52a-fe52091d5b12" : {
-   *       // readable only once bonded
-   *       value : "Secret",
-   *       readable : true,
-   *       security: {
-   *         read: {
-   *           mitm: true,
-   *           encrypted: true
-   *         }
-   *       }
-   *     },
-   *     "9d020004-bf5f-1d1a-b52a-fe52091d5b12" : {
-   *       // readable always
-   *       // writable only once bonded
-   *       value : "Readable",
-   *       readable : true,
-   *       writable : true,
-   *       onWrite : function(evt) {
-   *         console.log("Wrote ", evt.data);
-   *       },
-   *       security: {
-   *         write: {
-   *           mitm: true,
-   *           encrypted: true
-   *         }
-   *       }
-   *     }
-   *   }
-   * });
-   * ```
-   * **Note:** If `passkey` or `oob` is specified, the Nordic UART service (if
-   * enabled) will automatically be set to require encryption, but otherwise it is
-   * open.
-   * On Bangle.js 2, the `privacy` parameter can be used to set this device's BLE privacy / random address settings.
-   * The privacy feature provides a way to avoid being tracked over a period of time.
-   * This works by replacing the real BLE address with a random private address,
-   * that automatically changes at a specified interval.
-   * If a `"random_private_resolvable"` address is used, that address is generated with the help
-   * of an identity resolving key (IRK), that is exchanged during bonding.
-   * This allows a bonded device to still identify another device that is using a random private resolvable address.
-   * Note that, while this can help against being tracked, there are other ways a Bluetooth device can reveal its identity.
-   * For example, the name or services it advertises may be unique enough.
-   * ```
-   * NRF.setSecurity({
-   *   privacy: {
-   *     mode : "off"/"device_privacy"/"network_privacy" // The privacy mode that should be used.
-   *     addr_type : "random_private_resolvable"/"random_private_non_resolvable" // The type of address to use.
-   *     addr_cycle_s : int // How often the address should change, in seconds.
-   *   }
-   * });
-   * // enabled with (ideally sensible) defaults of:
-   * // mode: device_privacy
-   * // addr_type: random_private_resolvable
-   * // addr_cycle_s: 0 (use default address change interval)
-   * NRF.setSecurity({
-   *   privacy: 1
-   * });
-   * ```
-   * `mode` can be one of:
-   * * `"off"` - Use the real address.
-   * * `"device_privacy"` - Use a private address.
-   * * `"network_privacy"` - Use a private address,
-   *                         and reject a peer that uses its real address if we know that peer's IRK.
-   * If `mode` is `"off"`, all other fields are ignored and become optional.
-   * `addr_type` can be one of:
-   * * `"random_private_resolvable"` - Address that can be resolved by a bonded peer that knows our IRK.
-   * * `"random_private_non_resolvable"` - Address that cannot be resolved.
-   * `addr_cycle_s` must be an integer. Pass `0` to use the default address change interval.
-   * The default is usually to change the address every 15 minutes (or 900 seconds).
-   *
-   * @param {any} options - An object containing security-related options (see below)
-   * @url http://www.espruino.com/Reference#l_NRF_setSecurity
-   */
-  static setSecurity(options: any): void;
-
-  /**
-   * Return an object with information about the security state of the current
-   * peripheral connection:
-   * ```
-   * {
-   *   connected       // The connection is active (not disconnected).
-   *   encrypted       // Communication on this link is encrypted.
-   *   mitm_protected  // The encrypted communication is also protected against man-in-the-middle attacks.
-   *   bonded          // The peer is bonded with us
-   *   advertising     // Are we currently advertising?
-   *   connected_addr  // If connected=true, the MAC address of the currently connected device
-   *   privacy         // Current BLE privacy / random address settings.
-   *                   // Only present if Espruino was compiled with private address support (like for example on Bangle.js 2).
-   * }
-   * ```
-   * If there is no active connection, `{connected:false}` will be returned.
-   * See `NRF.setSecurity` for information about negotiating a secure connection.
-   * @returns {any} An object
-   * @url http://www.espruino.com/Reference#l_NRF_getSecurityStatus
-   */
-  static getSecurityStatus(): NRFSecurityStatus;
-
-  /**
-   *
-   * @param {boolean} forceRepair - True if we should force repairing even if there is already valid pairing info
-   * @returns {any} A promise
-   * @url http://www.espruino.com/Reference#l_NRF_startBonding
-   */
-  static startBonding(forceRepair: boolean): any;
-
-
-}
-
-/**
  * This class provides functionality to recognise gestures drawn on a touchscreen.
  * It is only built into Bangle.js 2.
  * Usage:
@@ -2289,6 +764,36 @@ declare class Unistroke {
 }
 
 /**
+ * Class containing utility functions for the Qwiic connectors
+ * on the [Jolt.js Smart Bluetooth driver](http://www.espruino.com/Jolt.js).
+ * Each class (available from `Jolt.Q0`/`Jolt.Q1`/`Jolt.Q2`/`Jolt.Q3`)
+ * has `sda` and `scl` fields with the pins for SDA and SCL on them.
+ * On Jolt.js, the four Qwiic connectors can be individually powered:
+ * * Q0/Q1 - GND is switched with a 500mA FET. The `fet` field contains the pin that controls the FET
+ * * Q2/Q3 - all 4 pins are connected to GPIO. `gnd` and `vcc` fields contain the pins for GND and VCC
+ * To control the power, use `Qwiic.setPower`, for example: `Jolt.Q0.setPower(true)`
+ * @url http://www.espruino.com/Reference#Qwiic
+ */
+declare class Qwiic {
+
+
+  /**
+   * This turns power for the given Qwiic connector on or off. See `Qwiic` for more information.
+   *
+   * @param {boolean} isOn - Whether the Qwiic connector is to be on or not
+   * @returns {any} The same Qwiic object (for call chaining)
+   * @url http://www.espruino.com/Reference#l_Qwiic_setPower
+   */
+  setPower(isOn: ShortBoolean): any;
+
+  /**
+   * @returns {any} An I2C object using this Qwiic connector, already set up
+   * @url http://www.espruino.com/Reference#l_Qwiic_i2c
+   */
+  i2c: any;
+}
+
+/**
  * Class containing AES encryption/decryption
  * **Note:** This library is currently only included in builds for boards where
  * there is space. For other boards there is `crypto.js` which implements SHA1 in
@@ -2299,9 +804,9 @@ declare class AES {
   /**
    *
    * @param {any} passphrase - Message to encrypt
-   * @param {any} key - Key to encrypt message - must be an ArrayBuffer of 128, 192, or 256 BITS
+   * @param {any} key - Key to encrypt message - must be an `ArrayBuffer` of 128, 192, or 256 BITS
    * @param {any} [options] - [optional] An object, may specify `{ iv : new Uint8Array(16), mode : 'CBC|CFB|CTR|OFB|ECB' }`
-   * @returns {any} Returns an ArrayBuffer
+   * @returns {any} Returns an `ArrayBuffer`
    * @url http://www.espruino.com/Reference#l_AES_encrypt
    */
   static encrypt(passphrase: any, key: any, options?: any): ArrayBuffer;
@@ -2309,12 +814,63 @@ declare class AES {
   /**
    *
    * @param {any} passphrase - Message to decrypt
-   * @param {any} key - Key to encrypt message - must be an ArrayBuffer of 128, 192, or 256 BITS
+   * @param {any} key - Key to encrypt message - must be an `ArrayBuffer` of 128, 192, or 256 BITS
    * @param {any} [options] - [optional] An object, may specify `{ iv : new Uint8Array(16), mode : 'CBC|CFB|CTR|OFB|ECB' }`
-   * @returns {any} Returns an ArrayBuffer
+   * @returns {any} Returns an `ArrayBuffer`
    * @url http://www.espruino.com/Reference#l_AES_decrypt
    */
   static decrypt(passphrase: any, key: any, options?: any): ArrayBuffer;
+
+  /**
+   * Encrypt a message with a key using AES in CCM authenticated encryption mode.
+   * This returns an object with the encrypted data and a generated tag for message authentication.
+   * Usage example:
+   * ```
+   * let message = "Hello World!";
+   * let key = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff];
+   * let nonce = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
+   * let tagLength = 4;
+   * let result = AES.ccmEncrypt(message, key, nonce, tagLength);
+   * ```
+   * The `result` object should now have a `data` and `tag` attribute; both are needed for decrypting and verifying the message:
+   * ```
+   * {
+   *   data: [206, 98, 239, 219, 146, 157, 59, 123, 102, 92, 118, 209],
+   *   tag: [230, 153, 191, 142]
+   * }
+   * ```
+   *
+   * @param {any} message - Message to encrypt
+   * @param {any} key - Key to encrypt message - an `ArrayBuffer` of 128 BITS
+   * @param {any} iv - nonce (initialization vector) - an `ArrayBuffer` of 7 to 13 bytes
+   * @param {any} tagLen - Length of tag to generate in bytes - must be one of 4, 6, 8, 10, 12, 14 or 16
+   * @returns {any} An object
+   * @url http://www.espruino.com/Reference#l_AES_ccmEncrypt
+   */
+  static ccmEncrypt(message: any, key: any, iv: any, tagLen: any): AES_CCM_EncryptResult;
+
+  /**
+   * Decrypt and authenticate an AES CCM encrypted message with an associated tag.
+   * Usage example:
+   * ```
+   * let message = "Hello World!";
+   * let key = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff];
+   * let nonce = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
+   * let tagLength = 4;
+   * let result = AES.ccmEncrypt(message, key, nonce, tagLength);
+   * let decrypted = AES.ccmDecrypt(result.data, key, nonce, result.tag);
+   * let decryptedMessage = String.fromCharCode.apply(null, decrypted);
+   * ```
+   * The `decryptedMessage` variable should now contain "Hello World!".
+   *
+   * @param {any} message - Message to decrypt
+   * @param {any} key - Key to decrypt message - an `ArrayBuffer` of 128 BITS
+   * @param {any} iv - Nonce (initialization vector) - an `ArrayBuffer` of 7 to 13 bytes
+   * @param {any} tag - Tag that came with the message - an `ArrayBuffer`
+   * @returns {any} Decrypted message, or null on error (for example if the tag doesn't match)
+   * @url http://www.espruino.com/Reference#l_AES_ccmDecrypt
+   */
+  static ccmDecrypt(message: any, key: any, iv: any, tag: any): any;
 
 
 }
@@ -2350,7 +906,7 @@ declare class Pixl {
    * @param {boolean} isOn - True if the LCD should be on, false if not
    * @url http://www.espruino.com/Reference#l_Pixl_setLCDPower
    */
-  static setLCDPower(isOn: boolean): void;
+  static setLCDPower(isOn: ShortBoolean): void;
 
   /**
    * Writes a command directly to the ST7567 LCD controller
@@ -2375,95 +931,6 @@ declare class Pixl {
 }
 
 /**
- * This class exists in order to interface Espruino with fast-moving trigger
- * wheels. Trigger wheels are physical discs with evenly spaced teeth cut into
- * them, and often with one or two teeth next to each other missing. A sensor sends
- * a signal whenever a tooth passed by, and this allows a device to measure not
- * only RPM, but absolute position.
- * This class is currently in testing - it is NOT AVAILABLE on normal boards.
- * @url http://www.espruino.com/Reference#Trig
- */
-declare class Trig {
-  /**
-   * Get the position of the trigger wheel at the given time (from getTime)
-   *
-   * @param {number} time - The time at which to find the position
-   * @returns {number} The position of the trigger wheel in degrees - as a floating point number
-   * @url http://www.espruino.com/Reference#l_Trig_getPosAtTime
-   */
-  static getPosAtTime(time: number): number;
-
-  /**
-   * Initialise the trigger class
-   *
-   * @param {Pin} pin - The pin to use for triggering
-   * @param {any} options - Additional options as an object. defaults are: ```{teethTotal:60,teethMissing:2,minRPM:30,keyPosition:0}```
-   * @url http://www.espruino.com/Reference#l_Trig_setup
-   */
-  static setup(pin: Pin, options: any): void;
-
-  /**
-   * Set a trigger for a certain point in the cycle
-   *
-   * @param {number} num - The trigger number (0..7)
-   * @param {number} pos - The position (in degrees) to fire the trigger at
-   * @param {any} pins - An array of pins to pulse (max 4)
-   * @param {number} pulseLength - The time (in msec) to pulse for
-   * @url http://www.espruino.com/Reference#l_Trig_setTrigger
-   */
-  static setTrigger(num: number, pos: number, pins: any, pulseLength: number): void;
-
-  /**
-   * Disable a trigger
-   *
-   * @param {number} num - The trigger number (0..7)
-   * @url http://www.espruino.com/Reference#l_Trig_killTrigger
-   */
-  static killTrigger(num: number): void;
-
-  /**
-   * Get the current state of a trigger
-   *
-   * @param {number} num - The trigger number (0..7)
-   * @returns {any} A structure containing all information about the trigger
-   * @url http://www.espruino.com/Reference#l_Trig_getTrigger
-   */
-  static getTrigger(num: number): any;
-
-  /**
-   * Get the RPM of the trigger wheel
-   * @returns {number} The current RPM of the trigger wheel
-   * @url http://www.espruino.com/Reference#l_Trig_getRPM
-   */
-  static getRPM(): number;
-
-  /**
-   * Get the current error flags from the trigger wheel - and zero them
-   * @returns {number} The error flags
-   * @url http://www.espruino.com/Reference#l_Trig_getErrors
-   */
-  static getErrors(): number;
-
-  /**
-   * Get the current error flags from the trigger wheel - and zero them
-   * @returns {any} An array of error strings
-   * @url http://www.espruino.com/Reference#l_Trig_getErrorArray
-   */
-  static getErrorArray(): any;
-
-
-}
-
-/**
- * @url http://www.espruino.com/Reference#Dickens
- */
-declare class Dickens {
-
-
-
-}
-
-/**
  * This class helps to convert URLs into Objects of information ready for
  * http.request/get
  * @url http://www.espruino.com/Reference#url
@@ -2480,7 +947,7 @@ declare class url {
    * @returns {any} An object containing options for ```http.request``` or ```http.get```. Contains `method`, `host`, `path`, `pathname`, `search`, `port` and `query`
    * @url http://www.espruino.com/Reference#l_url_parse
    */
-  static parse(urlStr: any, parseQuery: boolean): any;
+  static parse(urlStr: any, parseQuery: ShortBoolean): any;
 
 
 }
@@ -2641,7 +1108,7 @@ declare class Socket {
 declare class dgramSocket {
   /**
    * The 'message' event is called when a datagram message is received. If a handler
-   * is defined with `X.on('message', function(msg) { ... })` then it will be called`
+   * is defined with `X.on('message', function(msg) { ... })` then it will be called
    * @param {string} event - The event to listen to.
    * @param {(msg: any, rinfo: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
    * * `msg` A string containing the received message
@@ -3312,6 +1779,8 @@ declare const File: FileConstructor
 declare class Puck {
   /**
    * Turn on the magnetometer, take a single reading, and then turn it off again.
+   * If the magnetometer is already on (with `Puck.magOn()`) then the last reading
+   * is returned.
    * An object of the form `{x,y,z}` is returned containing magnetometer readings.
    * Due to residual magnetism in the Puck and magnetometer itself, with no magnetic
    * field the Puck will not return `{x:0,y:0,z:0}`.
@@ -3350,7 +1819,7 @@ declare class Puck {
    * Check out [the Puck.js page on the
    * magnetometer](http://www.espruino.com/Puck.js#on-board-peripherals) for more
    * information.
-   * ```JS
+   * ```
    * Puck.magOn(10); // 10 Hz
    * Puck.on('mag', function(e) {
    *   print(e);
@@ -3369,7 +1838,7 @@ declare class Puck {
    * Called after `Puck.accelOn()` every time accelerometer data is sampled. There is
    * one argument which is an object of the form `{acc:{x,y,z}, gyro:{x,y,z}}`
    * containing the data.
-   * ```JS
+   * ```
    * Puck.accelOn(12.5); // default 12.5Hz
    * Puck.on('accel', function(e) {
    *   print(e);
@@ -3710,59 +2179,11 @@ declare class Jolt {
 }
 
 /**
- * Class containing utility functions for the Qwiic connectors
- * on the [Jolt.js Smart Bluetooth driver](http://www.espruino.com/Jolt.js).
- * Each class (available from `Jolt.Q0`/`Jolt.Q1`/`Jolt.Q2`/`Jolt.Q3`)
- * has `sda` and `scl` fields with the pins for SDA and SCL on them.
- * On Jolt.js, the four Qwiic connectors can be individually powered:
- * * Q0/Q1 - GND is switched with a 500mA FET. The `fet` field contains the pin that controls the FET
- * * Q2/Q3 - all 4 pins are connected to GPIO. `gnd` and `vcc` fields contain the pins for GND and VCC
- * To control the power, use `Qwiic.setPower`, for example: `Jolt.Q0.setPower(true)`
- * @url http://www.espruino.com/Reference#Qwiic
- */
-declare class Qwiic {
-
-
-  /**
-   * This turns power for the given Qwiic connector on or off. See `Qwiic` for more information.
-   *
-   * @param {boolean} isOn - Whether the Qwiic connector is to be on or not
-   * @returns {any} The same Qwiic object (for call chaining)
-   * @url http://www.espruino.com/Reference#l_Qwiic_setPower
-   */
-  setPower(isOn: boolean): any;
-
-  /**
-   * @returns {any} An I2C object using this Qwiic connector, already set up
-   * @url http://www.espruino.com/Reference#l_Qwiic_i2c
-   */
-  i2c: any;
-}
-
-/**
  * Class containing utility functions for the [Bangle.js Smart
  * Watch](http://www.espruino.com/Bangle.js)
  * @url http://www.espruino.com/Reference#Bangle
  */
 declare class Bangle {
-  /**
-   * @url http://www.espruino.com/Reference#l_Bangle_drawWidgets
-   */
-  static drawWidgets(): void;
-
-  /**
-   * @url http://www.espruino.com/Reference#l_Bangle_setUI
-   */
-  static setUI(): void;
-
-  /**
-   * Sets the rotation of the LCD display (relative to its nominal orientation)
-   *
-   * @param {number} d - The number of degrees to the LCD display (0, 90, 180 or 270)
-   * @url http://www.espruino.com/Reference#l_Bangle_setLCDRotation
-   */
-  static setLCDRotation(d: number): void;
-
   /**
    * Accelerometer data available with `{x,y,z,diff,mag}` object as a parameter.
    * * `x` is X axis (left-right) in `g`
@@ -3800,11 +2221,11 @@ declare class Bangle {
   /**
    * Has the watch been moved so that it is face-up, or not face up?
    * @param {string} event - The event to listen to.
-   * @param {(up: boolean) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * @param {(up: ShortBoolean) => void} callback - A function that is executed when the event occurs. Its arguments are:
    * * `up` `true` if face-up
    * @url http://www.espruino.com/Reference#l_Bangle_faceUp
    */
-  static on(event: "faceUp", callback: (up: boolean) => void): void;
+  static on(event: "faceUp", callback: (up: ShortBoolean) => void): void;
 
   /**
    * This event happens when the watch has been twisted around it's axis - for
@@ -3819,11 +2240,11 @@ declare class Bangle {
   /**
    * Is the battery charging or not?
    * @param {string} event - The event to listen to.
-   * @param {(charging: boolean) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * @param {(charging: ShortBoolean) => void} callback - A function that is executed when the event occurs. Its arguments are:
    * * `charging` `true` if charging
    * @url http://www.espruino.com/Reference#l_Bangle_charging
    */
-  static on(event: "charging", callback: (charging: boolean) => void): void;
+  static on(event: "charging", callback: (charging: ShortBoolean) => void): void;
 
   /**
    * Magnetometer/Compass data available with `{x,y,z,dx,dy,dz,heading}` object as a
@@ -3848,7 +2269,7 @@ declare class Bangle {
    * Raw NMEA GPS / u-blox data messages received as a string
    * To get this event you must turn the GPS on with `Bangle.setGPSPower(1)`.
    * @param {string} event - The event to listen to.
-   * @param {(nmea: any, dataLoss: boolean) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * @param {(nmea: any, dataLoss: ShortBoolean) => void} callback - A function that is executed when the event occurs. Its arguments are:
    * * `nmea` A string containing the raw NMEA data from the GPS
    * * `dataLoss` This is set to true if some lines of GPS data have previously been lost (eg because system was too busy to queue up a GPS-raw event)
    * @url http://www.espruino.com/Reference#l_Bangle_GPS-raw
@@ -3942,31 +2363,31 @@ declare class Bangle {
    * Has the screen been turned on or off? Can be used to stop tasks that are no
    * longer useful if nothing is displayed. Also see `Bangle.isLCDOn()`
    * @param {string} event - The event to listen to.
-   * @param {(on: boolean) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * @param {(on: ShortBoolean) => void} callback - A function that is executed when the event occurs. Its arguments are:
    * * `on` `true` if screen is on
    * @url http://www.espruino.com/Reference#l_Bangle_lcdPower
    */
-  static on(event: "lcdPower", callback: (on: boolean) => void): void;
+  static on(event: "lcdPower", callback: (on: ShortBoolean) => void): void;
 
   /**
    * Has the backlight been turned on or off? Can be used to stop tasks that are no
    * longer useful if want to see in sun screen only. Also see `Bangle.isBacklightOn()`
    * @param {string} event - The event to listen to.
-   * @param {(on: boolean) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * @param {(on: ShortBoolean) => void} callback - A function that is executed when the event occurs. Its arguments are:
    * * `on` `true` if backlight is on
    * @url http://www.espruino.com/Reference#l_Bangle_backlight
    */
-  static on(event: "backlight", callback: (on: boolean) => void): void;
+  static on(event: "backlight", callback: (on: ShortBoolean) => void): void;
 
   /**
    * Has the screen been locked? Also see `Bangle.isLocked()`
    * @param {string} event - The event to listen to.
-   * @param {(on: boolean, reason: string) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * @param {(on: ShortBoolean, reason: string) => void} callback - A function that is executed when the event occurs. Its arguments are:
    * * `on` `true` if screen is locked, `false` if it is unlocked and touchscreen/buttons will work
    * * `reason` (2v20 onwards) If known, the reason for locking/unlocking - 'button','js','tap','doubleTap','faceUp','twist','timeout'
    * @url http://www.espruino.com/Reference#l_Bangle_lock
    */
-  static on(event: "lock", callback: (on: boolean, reason: string) => void): void;
+  static on(event: "lock", callback: (on: ShortBoolean, reason: string) => void): void;
 
   /**
    * If the watch is tapped, this event contains information on the way it was
@@ -4103,7 +2524,7 @@ declare class Bangle {
    * @param {boolean} isOn - True if the LCD backlight should be on, false if not
    * @url http://www.espruino.com/Reference#l_Bangle_setBacklight
    */
-  static setBacklight(isOn: boolean): void;
+  static setBacklight(isOn: ShortBoolean): void;
 
   /**
    * This function can be used to turn Bangle.js's LCD off or on.
@@ -4122,7 +2543,7 @@ declare class Bangle {
    * @param {boolean} isOn - True if the LCD should be on, false if not
    * @url http://www.espruino.com/Reference#l_Bangle_setLCDPower
    */
-  static setLCDPower(isOn: boolean): void;
+  static setLCDPower(isOn: ShortBoolean): void;
 
   /**
    * This function can be used to adjust the brightness of Bangle.js's display, and
@@ -4309,6 +2730,9 @@ declare class Bangle {
    *   off
    * * `btnLoadTimeout` how many milliseconds does the home button have to be pressed
    * for before the clock is reloaded? 1500ms default, or 0 means never.
+   * * `manualWatchdog` if set, this disables automatic kicking of the watchdog timer
+   * from the interrupt (when the button isn't held). You will then have to manually
+   * call `E.kickWatchdog()` from your code or the watch will reset after ~5 seconds.
    * * `hrmPollInterval` set the requested poll interval (in milliseconds) for the
    *   heart rate monitor. On Bangle.js 2 only 10,20,40,80,160,200 ms are supported,
    *   and polling rate may not be exact. The algorithm's filtering is tuned for
@@ -4321,8 +2745,7 @@ declare class Bangle {
    * * `hrmGreenAdjust` - (Bangle.js 2, 2v19+) if false (default is true) the green LED intensity won't be adjusted to get the HRM sensor 'exposure' correct. This is reset when the HRM is initialised with `Bangle.setHRMPower`.
    * * `hrmWearDetect` - (Bangle.js 2, 2v19+) if false (default is true) HRM readings won't be turned off if the watch isn't on your arm (based on HRM proximity sensor). This is reset when the HRM is initialised with `Bangle.setHRMPower`.
    * * `hrmPushEnv` - (Bangle.js 2, 2v19+) if true (default is false) HRM environment readings will be produced as `Bangle.on(`HRM-env`, ...)` events. This is reset when the HRM is initialised with `Bangle.setHRMPower`.
-   * * `seaLevelPressure` (Bangle.js 2) Normally 1013.25 millibars - this is used for
-   *   calculating altitude with the pressure sensor
+   * * `seaLevelPressure` (Bangle.js 2) Default 1013.25 millibars - this is used when calculating altitude from pressure sensor values from `Bangle.getPressure`/`pressure` events.
    * * `lcdBufferPtr` (Bangle.js 2 2v21+) Return a pointer to the first pixel of the 3 bit graphics buffer used by Bangle.js for the screen (stride = 178 bytes)
    * * `lcdDoubleRefresh` (Bangle.js 2 2v22+) If enabled, pulses EXTCOMIN twice per poll interval (avoids off-axis flicker)
    * Where accelerations are used they are in internal units, where `8192 = 1g`
@@ -4362,7 +2785,7 @@ declare class Bangle {
    * @param {boolean} isLocked - `true` if the Bangle is locked (no user input allowed)
    * @url http://www.espruino.com/Reference#l_Bangle_setLocked
    */
-  static setLocked(isLocked: boolean): void;
+  static setLocked(isLocked: ShortBoolean): void;
 
   /**
    * Also see the `Bangle.lock` event
@@ -4552,6 +2975,8 @@ declare class Bangle {
    * * `steps` is the number of steps during this period
    * * `bpm` the best BPM reading from HRM sensor during this period
    * * `bpmConfidence` best BPM confidence (0-100%) during this period
+   * * `bpmMin`/`bpmMax` (2v26+) the minimum/maximum BPM reading from HRM sensor during this period (where confidence is over 90)
+   * * `activity` (2v26+) the currently assumed activity, one of "UNKNOWN","NOT_WORN","WALKING","EXERCISE"
    *
    * @param {any} range - What time period to return data for, see below:
    * @returns {any} Returns an object containing various health info
@@ -4577,9 +3002,11 @@ declare class Bangle {
   static touchWr(reg: number, data: number): void;
 
   /**
-   * Reads a register from the touch controller
-   * **Note:** On Espruino 2v06 and before this function only returns a number (`cnt`
-   * is ignored).
+   * Reads a register from the touch controller. See https://github.com/espruino/Espruino/issues/2146#issuecomment-2554296721 for a list
+   * of registers. When the touchscreen is off (eg the Bangle is locked) then reading from any register will return `255` (`0xFF`) -
+   * so ensure the Bangle is unlocked with `Bangle.setLocked(false)` before trying to read or write.
+   * For example `print(Bangle.touchRd(0xa7).toString(16))` returns the `ChipID` register, which is `0xB4` (CST816S) on older Bangles or `0xB6` (CST816D) on newer ones.
+   * **Note:** On Espruino 2v06 and before this function only returns a number (`cnt` is ignored).
    *
    * @param {number} reg - Register number to read
    * @param {number} cnt - If specified, returns an array of the given length (max 128). If not (or 0) it returns a number
@@ -4682,11 +3109,13 @@ declare class Bangle {
 
   /**
    * Read temperature, pressure and altitude data. A promise is returned which will
-   * be resolved with `{temperature, pressure, altitude}`.
+   * be resolved with `{temperature (C), pressure (hPa), altitude (meters)}`.
    * If the Barometer has been turned on with `Bangle.setBarometerPower` then this
    * will return with the *next* reading as of 2v21 (or the existing reading on 2v20 or earlier). If the Barometer is off,
    * conversions take between 500-750ms.
-   * Altitude assumes a sea-level pressure of 1013.25 hPa
+   * Altitude assumes a sea-level pressure of 1013.25 hPa, but this cal be adjusted with
+   * a call to `Bangle.setOptions({ seaLevelPressure : 1013.25 })` - the Bangle.js Settings
+   * app contains a tool to adjust it.
    * If there's no pressure device (for example, the emulator),
    * this returns `undefined`, rather than a Promise.
    * ```
@@ -4925,7 +3354,7 @@ declare class Bangle {
    * @param {boolean} noReboot - Do not reboot the watch when done (default false, so will reboot)
    * @url http://www.espruino.com/Reference#l_Bangle_factoryReset
    */
-  static factoryReset(noReboot: boolean): void;
+  static factoryReset(noReboot: ShortBoolean): void;
 
   /**
    * Returns the rectangle on the screen that is currently reserved for the app.
@@ -4939,44 +3368,1395 @@ declare class Bangle {
 }
 
 /**
- * Class containing utility functions for accessing IO on the hexagonal badge
- * @url http://www.espruino.com/Reference#Badge
+ * The NRF class is for controlling functionality of the Nordic nRF51/nRF52 chips.
+ * Most functionality is related to Bluetooth Low Energy, however there are also
+ * some functions related to NFC that apply to NRF52-based devices.
+ * @url http://www.espruino.com/Reference#NRF
  */
-declare class Badge {
+declare class NRF {
   /**
-   * Capacitive sense - the higher the capacitance, the higher the number returned.
-   * Supply a corner number between 1 and 6, and an integer value will be returned
-   * that is proportional to the capacitance
-   *
-   * @param {number} corner - The corner to use
-   * @returns {number} Capacitive sense counter
-   * @url http://www.espruino.com/Reference#l_Badge_capSense
+   * Called when a host device connects to Espruino. The first argument contains the
+   * address.
+   * @param {string} event - The event to listen to.
+   * @param {(addr: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * * `addr` The address of the device that has connected
+   * @url http://www.espruino.com/Reference#l_NRF_connect
    */
-  static capSense(corner: number): number;
+  static on(event: "connect", callback: (addr: any) => void): void;
 
   /**
-   * **DEPRECATED** - Please use `E.getBattery()` instead.
-   * Return an approximate battery percentage remaining based on a normal CR2032
-   * battery (2.8 - 2.2v)
-   * @returns {number} A percentage between 0 and 100
-   * @url http://www.espruino.com/Reference#l_Badge_getBatteryPercentage
+   * Called when a host device disconnects from Espruino.
+   * The most common reason is:
+   * * 19 - `REMOTE_USER_TERMINATED_CONNECTION`
+   * * 22 - `LOCAL_HOST_TERMINATED_CONNECTION`
+   * @param {string} event - The event to listen to.
+   * @param {(reason: number) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * * `reason` The reason code reported back by the BLE stack - see Nordic's [`ble_hci.h` file](https://github.com/espruino/Espruino/blob/master/targetlibs/nrf5x_12/components/softdevice/s132/headers/ble_hci.h#L71) for more information
+   * @url http://www.espruino.com/Reference#l_NRF_disconnect
    */
-  static getBatteryPercentage(): number;
+  static on(event: "disconnect", callback: (reason: number) => void): void;
 
   /**
-   * Set the LCD's contrast
-   *
-   * @param {number} c - Contrast between 0 and 1
-   * @url http://www.espruino.com/Reference#l_Badge_setContrast
+   * Called when the Nordic Bluetooth stack (softdevice) generates an error. In pretty
+   * much all cases an Exception will also have been thrown.
+   * @param {string} event - The event to listen to.
+   * @param {(msg: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * * `msg` The error string
+   * @url http://www.espruino.com/Reference#l_NRF_error
    */
-  static setContrast(c: number): void;
+  static on(event: "error", callback: (msg: any) => void): void;
+
+  /**
+   * (Added in 2v19) Called when a central device connects to Espruino, pairs, and sends a passkey that Espruino should display.
+   * For this to be used, you'll have to specify that your device has a display using `NRF.setSecurity({mitm:1, display:1});`
+   * For instance:
+   * ```
+   * NRF.setSecurity({mitm:1, display:1});
+   * NRF.on("passkey", key => print("Enter PIN: ",passkey));
+   * ```
+   * It is also possible to specify a static passkey with `NRF.setSecurity({passkey:"123456", mitm:1, display:1});`
+   * in which case no `passkey` event handler is needed (this method works on Espruino 2v02 and later)
+   * **Note:** A similar event, [`BluetoothDevice.on("passkey", ...)`](http://www.espruino.com/Reference#l_BluetoothDevice_passkey) is available
+   * for when Espruino is connecting *to* another device (central mode).
+   * @param {string} event - The event to listen to.
+   * @param {(passkey: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * * `passkey` A 6 character numeric String to be displayed
+   * @url http://www.espruino.com/Reference#l_NRF_passkey
+   */
+  static on(event: "passkey", callback: (passkey: any) => void): void;
+
+  /**
+   * Contains updates on the security of the current Bluetooth link.
+   * See Nordic's `ble_gap_evt_auth_status_t` structure for more information.
+   * @param {string} event - The event to listen to.
+   * @param {(status: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * * `status` An object containing `{auth_status,bonded,lv4,kdist_own,kdist_peer}`
+   * @url http://www.espruino.com/Reference#l_NRF_security
+   */
+  static on(event: "security", callback: (status: any) => void): void;
+
+  /**
+   * Called when Bluetooth advertising starts or stops on Espruino
+   * @param {string} event - The event to listen to.
+   * @param {(isAdvertising: ShortBoolean) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * * `isAdvertising` Whether we are advertising or not
+   * @url http://www.espruino.com/Reference#l_NRF_advertising
+   */
+  static on(event: "advertising", callback: (isAdvertising: ShortBoolean) => void): void;
+
+  /**
+   * Called during the bonding process to update on status
+   * `status` is one of:
+   * * `"request"` - Bonding has been requested in code via `NRF.startBonding`
+   * * `"start"` - The bonding procedure has started
+   * * `"success"` - The bonding procedure has succeeded (`NRF.startBonding`'s promise resolves)
+   * * `"fail"` - The bonding procedure has failed (`NRF.startBonding`'s promise rejects)
+   * @param {string} event - The event to listen to.
+   * @param {(status: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * * `status` One of `'request'/'start'/'success'/'fail'`
+   * @url http://www.espruino.com/Reference#l_NRF_bond
+   */
+  static on(event: "bond", callback: (status: any) => void): void;
+
+  /**
+   * Called with a single byte value when Espruino is set up as a HID device and the
+   * computer it is connected to sends a HID report back to Espruino. This is usually
+   * used for handling indications such as the Caps Lock LED.
+   * @param {string} event - The event to listen to.
+   * @param {() => void} callback - A function that is executed when the event occurs.
+   * @url http://www.espruino.com/Reference#l_NRF_HID
+   */
+  static on(event: "HID", callback: () => void): void;
+
+  /**
+   * Called with discovered services when discovery is finished
+   * @param {string} event - The event to listen to.
+   * @param {() => void} callback - A function that is executed when the event occurs.
+   * @url http://www.espruino.com/Reference#l_NRF_servicesDiscover
+   */
+  static on(event: "servicesDiscover", callback: () => void): void;
+
+  /**
+   * Called with discovered characteristics when discovery is finished
+   * @param {string} event - The event to listen to.
+   * @param {() => void} callback - A function that is executed when the event occurs.
+   * @url http://www.espruino.com/Reference#l_NRF_characteristicsDiscover
+   */
+  static on(event: "characteristicsDiscover", callback: () => void): void;
+
+  /**
+   * Called when an NFC field is detected
+   * @param {string} event - The event to listen to.
+   * @param {() => void} callback - A function that is executed when the event occurs.
+   * @url http://www.espruino.com/Reference#l_NRF_NFCon
+   */
+  static on(event: "NFCon", callback: () => void): void;
+
+  /**
+   * Called when an NFC field is no longer detected
+   * @param {string} event - The event to listen to.
+   * @param {() => void} callback - A function that is executed when the event occurs.
+   * @url http://www.espruino.com/Reference#l_NRF_NFCoff
+   */
+  static on(event: "NFCoff", callback: () => void): void;
+
+  /**
+   * When NFC is started with `NRF.nfcStart`, this is fired when NFC data is
+   * received. It doesn't get called if NFC is started with `NRF.nfcURL` or
+   * `NRF.nfcRaw`
+   * @param {string} event - The event to listen to.
+   * @param {(arr: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * * `arr` An ArrayBuffer containign the received data
+   * @url http://www.espruino.com/Reference#l_NRF_NFCrx
+   */
+  static on(event: "NFCrx", callback: (arr: any) => void): void;
+
+  /**
+   * If a device is connected to Espruino, disconnect from it.
+   * @url http://www.espruino.com/Reference#l_NRF_disconnect
+   */
+  static disconnect(): void;
+
+  /**
+   * Disable Bluetooth advertising and disconnect from any device that connected to
+   * Puck.js as a peripheral (this won't affect any devices that Puck.js initiated
+   * connections to).
+   * This makes Puck.js undiscoverable, so it can't be connected to.
+   * Use `NRF.wake()` to wake up and make Puck.js connectable again.
+   * @url http://www.espruino.com/Reference#l_NRF_sleep
+   */
+  static sleep(): void;
+
+  /**
+   * Enable Bluetooth advertising (this is enabled by default), which allows other
+   * devices to discover and connect to Puck.js.
+   * Use `NRF.sleep()` to disable advertising.
+   * @url http://www.espruino.com/Reference#l_NRF_wake
+   */
+  static wake(): void;
+
+  /**
+   * Restart the Bluetooth softdevice (if there is currently a BLE connection, it
+   * will queue a restart to be done when the connection closes).
+   * You shouldn't need to call this function in normal usage. However, Nordic's BLE
+   * softdevice has some settings that cannot be reset. For example there are only a
+   * certain number of unique UUIDs. Once these are all used the only option is to
+   * restart the softdevice to clear them all out.
+   *
+   * @param {any} [callback] - [optional] A function to be called while the softdevice is uninitialised. Use with caution - accessing console/bluetooth will almost certainly result in a crash.
+   * @url http://www.espruino.com/Reference#l_NRF_restart
+   */
+  static restart(callback?: any): void;
+
+  /**
+   * Delete all data stored for all peers (bonding data used for secure connections). This cannot be done
+   * while a connection is active, so if there is a connection it will be postponed until everything is disconnected
+   * (which can be done by calling `NRF.disconnect()` and waiting).
+   * Booting your device while holding all buttons down together should also have the same effect.
+   *
+   * @param {any} [callback] - [optional] A function to be called while the softdevice is uninitialised. Use with caution - accessing console/bluetooth will almost certainly result in a crash.
+   * @url http://www.espruino.com/Reference#l_NRF_eraseBonds
+   */
+  static eraseBonds(callback?: any): void;
+
+  /**
+   * Get this device's default or current Bluetooth MAC address.
+   * For Puck.js, the last 5 characters of this (e.g. `ee:ff`) are used in the
+   * device's advertised Bluetooth name.
+   *
+   * @param {boolean} current - If true, return the current address rather than the default
+   * @returns {any} MAC address - a string of the form 'aa:bb:cc:dd:ee:ff'
+   * @url http://www.espruino.com/Reference#l_NRF_getAddress
+   */
+  static getAddress(current: ShortBoolean): any;
+
+  /**
+   * Set this device's default Bluetooth MAC address:
+   * ```
+   * NRF.setAddress("ff:ee:dd:cc:bb:aa random");
+   * ```
+   * Addresses take the form:
+   * * `"ff:ee:dd:cc:bb:aa"` or `"ff:ee:dd:cc:bb:aa public"` for a public address
+   * * `"ff:ee:dd:cc:bb:aa random"` for a random static address (the default for
+   *   Espruino)
+   * This may throw a `INVALID_BLE_ADDR` error if the upper two bits of the address
+   * don't match the address type.
+   * To change the address, Espruino must restart the softdevice. It will only do so
+   * when it is disconnected from other devices.
+   *
+   * @param {any} addr - The address to use (as a string)
+   * @url http://www.espruino.com/Reference#l_NRF_setAddress
+   */
+  static setAddress(addr: any): void;
+
+  /**
+   * Try to resolve a **bonded** peer's address from a random private resolvable address. If the peer
+   * is not bonded, there will be no IRK and `undefined` will be returned.
+   * A bunch of devices, especially smartphones, implement address randomisation and periodically change
+   * their bluetooth address to prevent being tracked.
+   * If such a device uses a "random private resolvable address", that address is generated
+   * with the help of an identity resolving key (IRK) that is exchanged during bonding.
+   * If we know the IRK of a device, we can check if an address was potentially generated by that device.
+   * The following will check an address against the IRKs of all bonded devices,
+   * and return the actual address of a bonded device if the given address was likely generated using that device's IRK:
+   * ```
+   * NRF.on('connect',addr=> {
+   *   // addr could be "aa:bb:cc:dd:ee:ff private-resolvable"
+   *   if (addr.endsWith("private-resolvable")) {
+   *     let resolved = NRF.resolveAddress(addr);
+   *     // resolved is "aa:bb:cc:dd:ee:ff public"
+   *     if (resolved) addr = resolved;
+   *   }
+   *   console.log("Device connected: ", addr);
+   * })
+   * ```
+   * You can get the current connection's address using `NRF.getSecurityStatus().connected_addr`,
+   * so can for instance do `NRF.resolveAddress(NRF.getSecurityStatus().connected_addr)`.
+   *
+   * @param {any} options - The address that should be resolved.
+   * @returns {any} The resolved address, or `undefined` if it couldn't be resolved.
+   * @url http://www.espruino.com/Reference#l_NRF_resolveAddress
+   */
+  static resolveAddress(options: any): any;
+
+  /**
+   * Get the battery level in volts (the voltage that the NRF chip is running off
+   * of).
+   * This is the battery level of the device itself - it has nothing to with any
+   * device that might be connected.
+   * @returns {number} Battery level in volts
+   * @url http://www.espruino.com/Reference#l_NRF_getBattery
+   */
+  static getBattery(): number;
+
+  /**
+   * Change the data that Espruino advertises.
+   * Data can be of the form `{ UUID : data_as_byte_array }`. The UUID should be a
+   * [Bluetooth Service
+   * ID](https://developer.bluetooth.org/gatt/services/Pages/ServicesHome.aspx).
+   * For example to return battery level at 95%, do:
+   * ```
+   * NRF.setAdvertising({
+   *   0x180F : [95] // Service data 0x180F = 95
+   * });
+   * ```
+   * Or you could report the current temperature:
+   * ```
+   * setInterval(function() {
+   *   NRF.setAdvertising({
+   *     0x1809 : [Math.round(E.getTemperature())]
+   *   });
+   * }, 30000);
+   * ```
+   * If you specify a value for the object key, Service Data is advertised. However
+   * if you specify `undefined`, the Service UUID is advertised:
+   * ```
+   * NRF.setAdvertising({
+   *   0x180D : undefined // Advertise service UUID 0x180D (HRM)
+   * });
+   * ```
+   * Service UUIDs can also be supplied in the second argument of `NRF.setServices`,
+   * but those go in the scan response packet.
+   * You can also supply the raw advertising data in an array. For example to
+   * advertise as an Eddystone beacon:
+   * ```
+   * NRF.setAdvertising([0x03,  // Length of Service List
+   *   0x03,  // Param: Service List
+   *   0xAA, 0xFE,  // Eddystone ID
+   *   0x13,  // Length of Service Data
+   *   0x16,  // Service Data
+   *   0xAA, 0xFE, // Eddystone ID
+   *   0x10,  // Frame type: URL
+   *   0xF8, // Power
+   *   0x03, // https://
+   *   'g','o','o','.','g','l','/','B','3','J','0','O','c'],
+   *     {interval:100});
+   * ```
+   * (However for Eddystone we'd advise that you use the [Espruino Eddystone
+   * library](/Puck.js+Eddystone))
+   * **Note:** When specifying data as an array, certain advertising options such as
+   * `discoverable` and `showName` won't have any effect.
+   * **Note:** The size of Bluetooth LE advertising packets is limited to 31 bytes.
+   * If you want to advertise more data, consider using an array for `data` (See
+   * below), or `NRF.setScanResponse`.
+   * You can even specify an array of arrays or objects, in which case each
+   * advertising packet will be used in turn - for instance to make your device
+   * advertise battery level and its name as well as both Eddystone and iBeacon :
+   * ```
+   * NRF.setAdvertising([
+   *   {0x180F : [E.getBattery()]}, // normal advertising, with battery %
+   *   require("ble_ibeacon").get(...), // iBeacon
+   *   require("ble_eddystone").get(...), // eddystone
+   * ], {interval:300});
+   * ```
+   * `options` is an object, which can contain:
+   * ```
+   * {
+   *   name: "Hello"              // The name of the device
+   *   showName: true/false       // include full name, or nothing
+   *   discoverable: true/false   // general discoverable, or limited - default is limited
+   *   connectable: true/false    // whether device is connectable - default is true
+   *   scannable : true/false     // whether device can be scanned for scan response packets - default is true
+   *   whenConnected : true/false // keep advertising when connected (nRF52 only)
+   *                              // switches to advertising as non-connectable when it is connected
+   *   interval: 600              // Advertising interval in msec, between 20 and 10000 (default is 375ms)
+   *   manufacturer: 0x0590       // IF sending manufacturer data, this is the manufacturer ID
+   *   manufacturerData: [...]    // IF sending manufacturer data, this is an array of data
+   *   phy: "1mbps/2mbps/coded"   // (NRF52833/NRF52840 only) use the long-range coded phy for transmission (1mbps default)
+   * }
+   * ```
+   * Setting `connectable` and `scannable` to false gives the lowest power
+   * consumption as the BLE radio doesn't have to listen after sending advertising.
+   * **NOTE:** Non-`connectable` advertising can't have an advertising interval less
+   * than 100ms according to the BLE spec.
+   * So for instance to set the name of Puck.js without advertising any other data
+   * you can just use the command:
+   * ```
+   * NRF.setAdvertising({},{name:"Hello"});
+   * ```
+   * You can also specify 'manufacturer data', which is another form of advertising
+   * data. We've registered the Manufacturer ID 0x0590 (as Pur3 Ltd) for use with
+   * *Official Espruino devices* - use it to advertise whatever data you'd like, but
+   * we'd recommend using JSON.
+   * For example by not advertising a device name you can send up to 24 bytes of JSON
+   * on Espruino's manufacturer ID:
+   * ```
+   * var data = {a:1,b:2};
+   * NRF.setAdvertising({},{
+   *   showName:false,
+   *   manufacturer:0x0590,
+   *   manufacturerData:JSON.stringify(data)
+   * });
+   * ```
+   * If you're using [EspruinoHub](https://github.com/espruino/EspruinoHub) then it
+   * will automatically decode this into the following MQTT topics:
+   * * `/ble/advertise/ma:c_:_a:dd:re:ss/espruino` -> `{"a":10,"b":15}`
+   * * `/ble/advertise/ma:c_:_a:dd:re:ss/a` -> `1`
+   * * `/ble/advertise/ma:c_:_a:dd:re:ss/b` -> `2`
+   * Note that **you only have 24 characters available for JSON**, so try to use the
+   * shortest field names possible and avoid floating point values that can be very
+   * long when converted to a String.
+   *
+   * @param {any} data - The service data to advertise as an object - see below for more info
+   * @param {any} [options] - [optional] Object of options
+   * @url http://www.espruino.com/Reference#l_NRF_setAdvertising
+   */
+  static setAdvertising(data: any, options?: any): void;
+
+  /**
+   * This is just like `NRF.setAdvertising`, except instead of advertising the data,
+   * it returns the packet that would be advertised as an array.
+   *
+   * @param {any} data - The data to advertise as an object
+   * @param {any} [options] - [optional] An object of options
+   * @returns {any} An array containing the advertising data
+   * @url http://www.espruino.com/Reference#l_NRF_getAdvertisingData
+   */
+  static getAdvertisingData(data: any, options?: any): any;
+
+  /**
+   * The raw scan response data should be supplied as an array. For example to return
+   * "Sample" for the device name:
+   * ```
+   * NRF.setScanResponse([0x07,  // Length of Data
+   *   0x09,  // Param: Complete Local Name
+   *   'S', 'a', 'm', 'p', 'l', 'e']);
+   * ```
+   * **Note:** `NRF.setServices(..., {advertise:[ ... ]})` writes advertised services
+   * into the scan response - so you can't use both `advertise` and `NRF.setServices`
+   * or one will overwrite the other.
+   *
+   * @param {any} data - The data to for the scan response
+   * @url http://www.espruino.com/Reference#l_NRF_setScanResponse
+   */
+  static setScanResponse(data: any): void;
+
+  /**
+   * Change the services and characteristics Espruino advertises.
+   * If you want to **change** the value of a characteristic, you need to use
+   * `NRF.updateServices()` instead
+   * To expose some information on Characteristic `ABCD` on service `BCDE` you could
+   * do:
+   * ```
+   * NRF.setServices({
+   *   0xBCDE : {
+   *     0xABCD : {
+   *       value : "Hello",
+   *       readable : true
+   *     }
+   *   }
+   * });
+   * ```
+   * Or to allow the 3 LEDs to be controlled by writing numbers 0 to 7 to a
+   * characteristic, you can do the following. `evt.data` is an ArrayBuffer.
+   * ```
+   * NRF.setServices({
+   *   0xBCDE : {
+   *     0xABCD : {
+   *       writable : true,
+   *       onWrite : function(evt) {
+   *         digitalWrite([LED3,LED2,LED1], evt.data[0]);
+   *       }
+   *     }
+   *   }
+   * });
+   * ```
+   * You can supply many different options:
+   * ```
+   * NRF.setServices({
+   *   0xBCDE : {
+   *     0xABCD : {
+   *       value : "Hello", // optional
+   *       maxLen : 5, // optional (otherwise is length of initial value)
+   *       broadcast : false, // optional, default is false
+   *       readable : true,   // optional, default is false
+   *       writable : true,   // optional, default is false
+   *       notify : true,   // optional, default is false
+   *       indicate : true,   // optional, default is false
+   *       description: "My Characteristic",  // optional, default is null,
+   *       security: { // optional - see NRF.setSecurity
+   *         read: { // optional
+   *           encrypted: false, // optional, default is false
+   *           mitm: false, // optional, default is false
+   *           lesc: false, // optional, default is false
+   *           signed: false // optional, default is false
+   *         },
+   *         write: { // optional
+   *           encrypted: true, // optional, default is false
+   *           mitm: false, // optional, default is false
+   *           lesc: false, // optional, default is false
+   *           signed: false // optional, default is false
+   *         }
+   *       },
+   *       onWrite : function(evt) { // optional
+   *         console.log("Got ", evt.data); // an ArrayBuffer
+   *       },
+   *       onWriteDesc : function(evt) { // optional - called when the 'cccd' descriptor is written
+   *         // for example this is called when notifications are requested by the client:
+   *         console.log("Notifications enabled = ", evt.data[0]&1);
+   *       }
+   *     }
+   *     // more characteristics allowed
+   *   }
+   *   // more services allowed
+   * });
+   * ```
+   * **Note:** UUIDs can be integers between `0` and `0xFFFF`, strings of the form
+   * `"ABCD"`, or strings of the form `"ABCDABCD-ABCD-ABCD-ABCD-ABCDABCDABCD"`
+   * `options` can be of the form:
+   * ```
+   * NRF.setServices(undefined, {
+   *   hid : new Uint8Array(...), // optional, default is undefined. Enable BLE HID support
+   *   uart : true, // optional, default is true. Enable BLE UART support
+   *   advertise: [ '180D' ] // optional, list of service UUIDs to advertise
+   *   ancs : true, // optional, Bangle.js-only, enable Apple ANCS support for notifications (see `NRF.ancs*`)
+   *   ams : true // optional, Bangle.js-only, enable Apple AMS support for media control (see `NRF.ams*`)
+   *   cts : true // optional, Bangle.js-only, enable Apple Current Time Service support (see `NRF.ctsGetTime`)
+   * });
+   * ```
+   * To enable BLE HID, you must set `hid` to an array which is the BLE report
+   * descriptor. The easiest way to do this is to use the `ble_hid_controls` or
+   * `ble_hid_keyboard` modules.
+   * **Note:** Just creating a service doesn't mean that the service will be
+   * advertised. It will only be available after a device connects. To advertise,
+   * specify the UUIDs you wish to advertise in the `advertise` field of the second
+   * `options` argument. For example this will create and advertise a heart rate
+   * service:
+   * ```
+   * NRF.setServices({
+   *   0x180D: { // heart_rate
+   *     0x2A37: { // heart_rate_measurement
+   *       notify: true,
+   *       value : [0x06, heartrate],
+   *     }
+   *   }
+   * }, { advertise: [ '180D' ] });
+   * ```
+   * You may specify 128 bit UUIDs to advertise, however you may get a `DATA_SIZE`
+   * exception because there is insufficient space in the Bluetooth LE advertising
+   * packet for the 128 bit UART UUID as well as the UUID you specified. In this case
+   * you can add `uart:false` after the `advertise` element to disable the UART,
+   * however you then be unable to connect to Puck.js's console via Bluetooth.
+   * If you absolutely require two or more 128 bit UUIDs then you will have to
+   * specify your own raw advertising data packets with `NRF.setAdvertising`
+   * **Note:** The services on Espruino can only be modified when there is no device
+   * connected to it as it requires a restart of the Bluetooth stack. **iOS devices
+   * will 'cache' the list of services** so apps like NRF Connect may incorrectly
+   * display the old services even after you have modified them. To fix this, disable
+   * and re-enable Bluetooth on your iOS device, or use an Android device to run NRF
+   * Connect.
+   * **Note:** Not all combinations of security configuration values are valid, the
+   * valid combinations are: encrypted, encrypted + mitm, lesc, signed, signed +
+   * mitm. See `NRF.setSecurity` for more information.
+   *
+   * @param {any} data - The service (and characteristics) to advertise
+   * @param {any} [options] - [optional] Object containing options
+   * @url http://www.espruino.com/Reference#l_NRF_setServices
+   */
+  static setServices(data: { [key: number]: { [key: number]: { value?: string, maxLen?: number, broadcast?: boolean, readable?: boolean, writable?: boolean, notify?: boolean, indicate?: boolean, description?: string, security?: { read?: { encrypted?: boolean, mitm?: boolean, lesc?: boolean, signed?: boolean }, write?: { encrypted?: boolean, mitm?: boolean, lesc?: boolean, signed?: boolean } }, onWrite?: (evt: { data: ArrayBuffer }) => void } } }, options?: any): void;
+
+  /**
+   * Update values for the services and characteristics Espruino advertises. Only
+   * services and characteristics previously declared using `NRF.setServices` are
+   * affected.
+   * To update the '0xABCD' characteristic in the '0xBCDE' service:
+   * ```
+   * NRF.updateServices({
+   *   0xBCDE : {
+   *     0xABCD : {
+   *       value : "World"
+   *     }
+   *   }
+   * });
+   * ```
+   * You can also use 128 bit UUIDs, for example
+   * `"b7920001-3c1b-4b40-869f-3c0db9be80c6"`.
+   * To define a service and characteristic and then notify connected clients of a
+   * change to it when a button is pressed:
+   * ```
+   * NRF.setServices({
+   *   0xBCDE : {
+   *     0xABCD : {
+   *       value : "Hello",
+   *       maxLen : 20,
+   *       notify: true
+   *     }
+   *   }
+   * });
+   * setWatch(function() {
+   *   NRF.updateServices({
+   *     0xBCDE : {
+   *       0xABCD : {
+   *         value : "World!",
+   *         notify: true
+   *       }
+   *     }
+   *   });
+   * }, BTN, { repeat:true, edge:"rising", debounce: 50 });
+   * ```
+   * This only works if the characteristic was created with `notify: true` using
+   * `NRF.setServices`, otherwise the characteristic will be updated but no
+   * notification will be sent.
+   * Also note that `maxLen` was specified. If it wasn't then the maximum length of
+   * the characteristic would have been 5 - the length of `"Hello"`.
+   * To indicate (i.e. notify with ACK) connected clients of a change to the '0xABCD'
+   * characteristic in the '0xBCDE' service:
+   * ```
+   * NRF.updateServices({
+   *   0xBCDE : {
+   *     0xABCD : {
+   *       value : "World",
+   *       indicate: true
+   *     }
+   *   }
+   * });
+   * ```
+   * This only works if the characteristic was created with `indicate: true` using
+   * `NRF.setServices`, otherwise the characteristic will be updated but no
+   * notification will be sent.
+   * **Note:** See `NRF.setServices` for more information
+   *
+   * @param {any} data - The service (and characteristics) to update
+   * @url http://www.espruino.com/Reference#l_NRF_updateServices
+   */
+  static updateServices(data: any): void;
+
+  /**
+   * Start/stop listening for BLE advertising packets within range. Returns a
+   * `BluetoothDevice` for each advertising packet. **By default this is not an active
+   * scan, so Scan Response advertising data is not included (see below)**
+   * ```
+   * // Start scanning
+   * packets=10;
+   * NRF.setScan(function(d) {
+   *   packets--;
+   *   if (packets<=0)
+   *     NRF.setScan(); // stop scanning
+   *   else
+   *     console.log(d); // print packet info
+   * });
+   * ```
+   * Each `BluetoothDevice` will look a bit like:
+   * ```
+   * BluetoothDevice {
+   *   "id": "aa:bb:cc:dd:ee:ff", // address
+   *   "rssi": -89,               // signal strength
+   *   "services": [ "128bit-uuid", ... ],     // zero or more service UUIDs
+   *   "data": new Uint8Array([ ... ]).buffer, // ArrayBuffer of returned data
+   *   "serviceData" : { "0123" : [ 1 ] }, // if service data is in 'data', it's extracted here
+   *   "manufacturer" : 0x1234, // if manufacturer data is in 'data', the 16 bit manufacturer ID is extracted here
+   *   "manufacturerData" : new Uint8Array([...]).buffer, // if manufacturer data is in 'data', the data is extracted here as an ArrayBuffer
+   *   "name": "DeviceName"       // the advertised device name
+   *  }
+   * ```
+   * You can also supply a set of filters (as described in `NRF.requestDevice`) as a
+   * second argument, which will allow you to filter the devices you get a callback
+   * for. This helps to cut down on the time spent processing JavaScript code in
+   * areas with a lot of Bluetooth advertisements. For example to find only devices
+   * with the manufacturer data `0x0590` (Espruino's ID) you could do:
+   * ```
+   * NRF.setScan(function(d) {
+   *   console.log(d.manufacturerData);
+   * }, { filters: [{ manufacturerData:{0x0590:{}} }] });
+   * ```
+   * You can also specify `active:true` in the second argument to perform active
+   * scanning (this requests scan response packets) from any devices it finds.
+   * **Note:** Using a filter in `setScan` filters each advertising packet
+   * individually. As a result, if you filter based on a service UUID and a device
+   * advertises with multiple packets (or a scan response when `active:true`) only
+   * the packets matching the filter are returned. To aggregate multiple packets you
+   * can use `NRF.findDevices`.
+   * **Note:** BLE advertising packets can arrive quickly - faster than you'll be
+   * able to print them to the console. It's best only to print a few, or to use a
+   * function like `NRF.findDevices(..)` which will collate a list of available
+   * devices.
+   * **Note:** Using setScan turns the radio's receive mode on constantly. This can
+   * draw a *lot* of power (12mA or so), so you should use it sparingly or you can
+   * run your battery down quickly.
+   *
+   * @param {any} callback - The callback to call with received advertising packets, or undefined to stop
+   * @param {any} [options] - [optional] An object `{filters: ...}` (as would be passed to `NRF.requestDevice`) to filter devices by
+   * @url http://www.espruino.com/Reference#l_NRF_setScan
+   */
+  static setScan(callback: any, options?: any): void;
+
+  /**
+   * This function can be used to quickly filter through Bluetooth devices.
+   * For instance if you wish to scan for multiple different types of device at the
+   * same time then you could use `NRF.findDevices` with all the filters you're
+   * interested in. When scanning is finished you can then use `NRF.filterDevices` to
+   * pick out just the devices of interest.
+   * ```
+   * // the two types of device we're interested in
+   * var filter1 = [{serviceData:{"fe95":{}}}];
+   * var filter2 = [{namePrefix:"Pixl.js"}];
+   * // the following filter will return both types of device
+   * var allFilters = filter1.concat(filter2);
+   * // now scan for both types of device, and filter them out afterwards
+   * NRF.findDevices(function(devices) {
+   *   var devices1 = NRF.filterDevices(devices, filter1);
+   *   var devices2 = NRF.filterDevices(devices, filter2);
+   *   // ...
+   * }, {filters : allFilters});
+   * ```
+   *
+   * @param {any} devices - An array of `BluetoothDevice` objects, from `NRF.findDevices` or similar
+   * @param {any} filters - A list of filters (as would be passed to `NRF.requestDevice`) to filter devices by
+   * @returns {any} An array of `BluetoothDevice` objects that match the given filters
+   * @url http://www.espruino.com/Reference#l_NRF_filterDevices
+   */
+  static filterDevices(devices: any, filters: any): any;
+
+  /**
+   * Utility function to return a list of BLE devices detected in range. Behind the
+   * scenes, this uses `NRF.setScan(...)` and collates the results.
+   * ```
+   * NRF.findDevices(function(devices) {
+   *   console.log(devices);
+   * }, 1000);
+   * ```
+   * prints something like:
+   * ```
+   * [
+   *   BluetoothDevice {
+   *     "id" : "e7:e0:57:ad:36:a2 random",
+   *     "rssi": -45,
+   *     "services": [ "4567" ],
+   *     "serviceData" : { "0123" : [ 1 ] },
+   *     "manufacturer" : 1424,
+   *     "manufacturerData" : new Uint8Array([ ... ]).buffer,
+   *     "data": new ArrayBuffer([ ... ]).buffer,
+   *     "name": "Puck.js 36a2"
+   *    },
+   *   BluetoothDevice {
+   *     "id": "c0:52:3f:50:42:c9 random",
+   *     "rssi": -65,
+   *     "data": new ArrayBuffer([ ... ]),
+   *     "name": "Puck.js 8f57"
+   *    }
+   *  ]
+   * ```
+   * For more information on the structure returned, see `NRF.setScan`.
+   * If you want to scan only for specific devices you can replace the timeout with
+   * an object of the form `{filters: ..., timeout : ..., active: bool}` using the
+   * filters described in `NRF.requestDevice`. For example to search for devices with
+   * Espruino's `manufacturerData`:
+   * ```
+   * NRF.findDevices(function(devices) {
+   *   ...
+   * }, {timeout : 2000, filters : [{ manufacturerData:{0x0590:{}} }] });
+   * ```
+   * You could then use
+   * [`BluetoothDevice.gatt.connect(...)`](/Reference#l_BluetoothRemoteGATTServer_connect)
+   * on the device returned to make a connection.
+   * You can also use [`NRF.connect(...)`](/Reference#l_NRF_connect) on just the `id`
+   * string returned, which may be useful if you always want to connect to a specific
+   * device.
+   * **Note:** Using findDevices turns the radio's receive mode on for 2000ms (or
+   * however long you specify). This can draw a *lot* of power (12mA or so), so you
+   * should use it sparingly or you can run your battery down quickly.
+   * **Note:** The 'data' field contains the data of *the last packet received*.
+   * There may have been more packets. To get data for each packet individually use
+   * `NRF.setScan` instead.
+   *
+   * @param {any} callback - The callback to call with received advertising packets (as `BluetoothDevice`), or undefined to stop
+   * @param {any} [options] - [optional] A time in milliseconds to scan for (defaults to 2000), Or an optional object `{filters: ..., timeout : ..., active: bool}` (as would be passed to `NRF.requestDevice`) to filter devices by
+   * @url http://www.espruino.com/Reference#l_NRF_findDevices
+   */
+  static findDevices(callback: (devices: BluetoothDevice[]) => void, options?: number | { filters?: NRFFilters[], timeout?: number, active?: boolean }): void;
+
+  /**
+   * Start/stop listening for RSSI values on the currently active connection (where
+   * This device is a peripheral and is being connected to by a 'central' device)
+   * ```
+   * // Start scanning
+   * NRF.setRSSIHandler(function(rssi) {
+   *   console.log(rssi); // prints -85 (or similar)
+   * });
+   * // Stop Scanning
+   * NRF.setRSSIHandler();
+   * ```
+   * RSSI is the 'Received Signal Strength Indication' in dBm
+   *
+   * @param {any} callback - The callback to call with the RSSI value, or undefined to stop
+   * @url http://www.espruino.com/Reference#l_NRF_setRSSIHandler
+   */
+  static setRSSIHandler(callback: any): void;
+
+  /**
+   * Set the BLE radio transmit power. The default TX power is 0 dBm, and
+   *
+   * @param {number} power - Transmit power. Accepted values are -40(nRF52 only), -30(nRF51 only), -20, -16, -12, -8, -4, 0, and 4 dBm. On nRF52840 (eg Bangle.js 2) 5/6/7/8 dBm are available too. Others will give an error code.
+   * @url http://www.espruino.com/Reference#l_NRF_setTxPower
+   */
+  static setTxPower(power: number): void;
+
+  /**
+   * **THIS IS DEPRECATED** - please use `NRF.setConnectionInterval` for peripheral
+   * and `NRF.connect(address, options)`/`BluetoothRemoteGATTServer.connect(options)`
+   * for central connections.
+   * This sets the connection parameters - these affect the transfer speed and power
+   * usage when the device is connected.
+   * * When not low power, the connection interval is between 7.5 and 20ms
+   * * When low power, the connection interval is between 500 and 1000ms
+   * When low power connection is enabled, transfers of data over Bluetooth will be
+   * very slow, however power usage while connected will be drastically decreased.
+   * This will only take effect after the connection is disconnected and
+   * re-established.
+   *
+   * @param {boolean} lowPower - Whether the connection is low power or not
+   * @url http://www.espruino.com/Reference#l_NRF_setLowPowerConnection
+   */
+  static setLowPowerConnection(lowPower: ShortBoolean): void;
+
+  /**
+   * Enables NFC and starts advertising the given URL. For example:
+   * ```
+   * NRF.nfcURL("http://espruino.com");
+   * ```
+   *
+   * @param {any} url - The URL string to expose on NFC, or `undefined` to disable NFC
+   * @url http://www.espruino.com/Reference#l_NRF_nfcURL
+   */
+  static nfcURL(url: any): void;
+
+  /**
+   * Enables NFC and with an out of band 16 byte pairing key.
+   * For example the following will enable out of band pairing on BLE such that the
+   * device will pair when you tap the phone against it:
+   * ```
+   * var bleKey = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00];
+   * NRF.on('security',s=>print("security",JSON.stringify(s)));
+   * NRF.nfcPair(bleKey);
+   * NRF.setSecurity({oob:bleKey, mitm:true});
+   * ```
+   *
+   * @param {any} key - 16 byte out of band key
+   * @url http://www.espruino.com/Reference#l_NRF_nfcPair
+   */
+  static nfcPair(key: any): void;
+
+  /**
+   * Enables NFC with a record that will launch the given android app.
+   * For example:
+   * ```
+   * NRF.nfcAndroidApp("no.nordicsemi.android.nrftoolbox")
+   * ```
+   *
+   * @param {any} app - The unique identifier of the given Android App
+   * @url http://www.espruino.com/Reference#l_NRF_nfcAndroidApp
+   */
+  static nfcAndroidApp(app: any): void;
+
+  /**
+   * Enables NFC and starts advertising with Raw data. For example:
+   * ```
+   * NRF.nfcRaw(new Uint8Array([193, 1, 0, 0, 0, 13, 85, 3, 101, 115, 112, 114, 117, 105, 110, 111, 46, 99, 111, 109]));
+   * // same as NRF.nfcURL("http://espruino.com");
+   * ```
+   *
+   * @param {any} payload - The NFC NDEF message to deliver to the reader
+   * @url http://www.espruino.com/Reference#l_NRF_nfcRaw
+   */
+  static nfcRaw(payload: any): void;
+
+  /**
+   * **Advanced NFC Functionality.** If you just want to advertise a URL, use
+   * `NRF.nfcURL` instead.
+   * Enables NFC and starts advertising. `NFCrx` events will be fired when data is
+   * received.
+   * ```
+   * NRF.nfcStart();
+   * ```
+   *
+   * @param {any} payload - Optional 7 byte UID
+   * @returns {any} Internal tag memory (first 10 bytes of tag data)
+   * @url http://www.espruino.com/Reference#l_NRF_nfcStart
+   */
+  static nfcStart(payload: any): any;
+
+  /**
+   * **Advanced NFC Functionality.** If you just want to advertise a URL, use
+   * `NRF.nfcURL` instead.
+   * Disables NFC.
+   * ```
+   * NRF.nfcStop();
+   * ```
+   *
+   * @url http://www.espruino.com/Reference#l_NRF_nfcStop
+   */
+  static nfcStop(): void;
+
+  /**
+   * **Advanced NFC Functionality.** If you just want to advertise a URL, use
+   * `NRF.nfcURL` instead.
+   * Acknowledges the last frame and optionally transmits a response. If payload is
+   * an array, then a array.length byte nfc frame is sent. If payload is a int, then
+   * a 4bit ACK/NACK is sent. **Note:** ```nfcSend``` should always be called after
+   * an ```NFCrx``` event.
+   * ```
+   * NRF.nfcSend(new Uint8Array([0x01, 0x02, ...]));
+   * // or
+   * NRF.nfcSend(0x0A);
+   * // or
+   * NRF.nfcSend();
+   * ```
+   *
+   * @param {any} payload - Optional tx data
+   * @url http://www.espruino.com/Reference#l_NRF_nfcSend
+   */
+  static nfcSend(payload: any): void;
+
+  /**
+   * Send a USB HID report. HID must first be enabled with `NRF.setServices({}, {hid:
+   * hid_report})`
+   *
+   * @param {any} data - Input report data as an array
+   * @param {any} callback - A callback function to be called when the data is sent
+   * @url http://www.espruino.com/Reference#l_NRF_sendHIDReport
+   */
+  static sendHIDReport(data: number[], callback?: () => void): void
+
+  /**
+   * Check if Apple Notification Center Service (ANCS) is currently active on the BLE
+   * connection
+   *
+   * @returns {boolean} True if Apple Notification Center Service (ANCS) has been initialised and is active
+   * @url http://www.espruino.com/Reference#l_NRF_ancsIsActive
+   */
+  static ancsIsActive(): boolean;
+
+  /**
+   * Send an ANCS action for a specific Notification UID. Corresponds to
+   * posaction/negaction in the 'ANCS' event that was received
+   *
+   * @param {number} uid - The UID of the notification to respond to
+   * @param {boolean} positive - `true` for positive action, `false` for negative
+   * @url http://www.espruino.com/Reference#l_NRF_ancsAction
+   */
+  static ancsAction(uid: number, positive: ShortBoolean): void;
+
+  /**
+   * Get ANCS info for a notification event received via `E.ANCS`, e.g.:
+   * ```
+   * E.on('ANCS', event => {
+   *   NRF.ancsGetNotificationInfo( event.uid ).then(a=>print("Notify",E.toJS(a)));
+   * });
+   * ```
+   * Returns:
+   * ```
+   * {
+   *   "uid" : integer,
+   *   "appId": string,
+   *   "title": string,
+   *   "subtitle": string,
+   *   "message": string,
+   *   "messageSize": string,
+   *   "date": string,
+   *   "posAction": string,
+   *   "negAction": string
+   * }
+   * ```
+   *
+   * @param {number} uid - The UID of the notification to get information for
+   * @returns {any} A `Promise` that is resolved (or rejected) when the connection is complete
+   * @url http://www.espruino.com/Reference#l_NRF_ancsGetNotificationInfo
+   */
+  static ancsGetNotificationInfo(uid: number): Promise<void>;
+
+  /**
+   * Get ANCS info for an app (app id is available via `NRF.ancsGetNotificationInfo`)
+   * Promise returns:
+   * ```
+   * {
+   *   "uid" : int,
+   *   "appId" : string,
+   *   "title" : string,
+   *   "subtitle" : string,
+   *   "message" : string,
+   *   "messageSize" : string,
+   *   "date" : string,
+   *   "posAction" : string,
+   *   "negAction" : string,
+   *   "name" : string,
+   * }
+   * ```
+   *
+   * @param {any} id - The app ID to get information for
+   * @returns {any} A `Promise` that is resolved (or rejected) when the connection is complete
+   * @url http://www.espruino.com/Reference#l_NRF_ancsGetAppInfo
+   */
+  static ancsGetAppInfo(id: any): Promise<void>;
+
+  /**
+   * Check if Apple Media Service (AMS) is currently active on the BLE connection
+   *
+   * @returns {boolean} True if Apple Media Service (AMS) has been initialised and is active
+   * @url http://www.espruino.com/Reference#l_NRF_amsIsActive
+   */
+  static amsIsActive(): boolean;
+
+  /**
+   * Get Apple Media Service (AMS) info for the current media player. "playbackinfo"
+   * returns a concatenation of three comma-separated values:
+   * - PlaybackState: a string that represents the integer value of the playback
+   *   state:
+   *     - PlaybackStatePaused = 0
+   *     - PlaybackStatePlaying = 1
+   *     - PlaybackStateRewinding = 2
+   *     - PlaybackStateFastForwarding = 3
+   * - PlaybackRate: a string that represents the floating point value of the
+   *   playback rate.
+   * - ElapsedTime: a string that represents the floating point value of the elapsed
+   *   time of the current track, in seconds
+   *
+   * @param {any} id - Either 'name', 'playbackinfo' or 'volume'
+   * @returns {any} A `Promise` that is resolved (or rejected) when the connection is complete
+   * @url http://www.espruino.com/Reference#l_NRF_amsGetPlayerInfo
+   */
+  static amsGetPlayerInfo(id: any): Promise<void>;
+
+  /**
+   * Get Apple Media Service (AMS) info for the currently-playing track
+   *
+   * @param {any} id - Either 'artist', 'album', 'title' or 'duration'
+   * @returns {any} A `Promise` that is resolved (or rejected) when the connection is complete
+   * @url http://www.espruino.com/Reference#l_NRF_amsGetTrackInfo
+   */
+  static amsGetTrackInfo(id: any): Promise<void>;
+
+  /**
+   * Send an AMS command to an Apple Media Service device to control music playback
+   * Command is one of play, pause, playpause, next, prev, volup, voldown, repeat,
+   * shuffle, skipforward, skipback, like, dislike, bookmark
+   *
+   * @param {any} id - For example, 'play', 'pause', 'volup' or 'voldown'
+   * @url http://www.espruino.com/Reference#l_NRF_amsCommand
+   */
+  static amsCommand(id: any): void;
+
+  /**
+   * Check if Apple Current Time Service (CTS) is currently active on the BLE connection
+   *
+   * @returns {boolean} True if Apple Current Time Service (CTS) has been initialised and is active
+   * @url http://www.espruino.com/Reference#l_NRF_ctsIsActive
+   */
+  static ctsIsActive(): boolean;
+
+  /**
+   * Returns time information from the Current Time Service
+   * (if requested with `NRF.ctsGetTime` and is activated by calling `NRF.setServices(..., {..., cts:true})`)
+   * ```
+   * {
+   *   date : // Date object with the current date
+   *   day :  // if known, 0=sun,1=mon (matches JS `Date`)
+   *   reason : [ // reason for the date change
+   *       "external", // External time change
+   *       "manual",   // Manual update
+   *       "timezone", // Timezone changed
+   *       "DST",      // Daylight savings
+   *     ]
+   *   timezone // if LTI characteristic exists, this is the timezone
+   *   dst      // if LTI characteristic exists, this is the dst adjustment
+   * }
+   * ```
+   * For instance this can be used as follows to update Espruino's time:
+   * ```
+   * E.on('CTS',e=>{
+   *   setTime(e.date.getTime()/1000);
+   * });
+   * NRF.ctsGetTime(); // also returns a promise with CTS info
+   * ```
+   * @param {string} event - The event to listen to.
+   * @param {(info: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * * `info` An object (see below)
+   * @url http://www.espruino.com/Reference#l_NRF_CTS
+   */
+  static on(event: "CTS", callback: (info: any) => void): void;
+
+  /**
+   * Read the time from CTS - creates an `NRF.on('CTS', ...)` event as well
+   * ```
+   * NRF.ctsGetTime(); // also returns a promise
+   * ```
+   * @returns {any} A `Promise` that is resolved (or rejected) when time is received
+   * @url http://www.espruino.com/Reference#l_NRF_ctsGetTime
+   */
+  static ctsGetTime(): Promise<void>;
+
+  /**
+   * Search for available devices matching the given filters. Since we have no UI
+   * here, Espruino will pick the FIRST device it finds, or it'll call `catch`.
+   * `options` can have the following fields:
+   * * `filters` - a list of filters that a device must match before it is returned
+   *   (see below)
+   * * `timeout` - the maximum time to scan for in milliseconds (scanning stops when
+   * a match is found. e.g. `NRF.requestDevice({ timeout:2000, filters: [ ... ] })`
+   * * `active` - whether to perform active scanning (requesting 'scan response'
+   * packets from any devices that are found). e.g. `NRF.requestDevice({ active:true,
+   * filters: [ ... ] })`
+   * * `phy` - (NRF52833/NRF52840 only) the type of Bluetooth signals to scan for (can
+   *   be `"1mbps/coded/both/2mbps"`)
+   *   * `1mbps` (default) - standard Bluetooth LE advertising
+   *   * `coded` - long range
+   *   * `both` - standard and long range
+   *   * `2mbps` - high speed 2mbps (not working)
+   * * `extended` - (NRF52833/NRF52840 only) support receiving extended-length advertising
+   *   packets (default=true if phy isn't `"1mbps"`)
+   * * `extended` - (NRF52833/NRF52840 only) support receiving extended-length advertising
+   *   packets (default=true if phy isn't `"1mbps"`)
+   * * `window` - (2v22+) how long we scan for in milliseconds (default 100ms)
+   * * `interval` - (2v22+) how often we scan in milliseconds (default 100ms) - `window=interval=100`(default) is all the time. When
+   * scanning on both `1mbps` and `coded`, `interval` needs to be twice `window`.
+   * **NOTE:** `timeout` and `active` are not part of the Web Bluetooth standard.
+   * The following filter types are implemented:
+   * * `services` - list of services as strings (all of which must match). 128 bit
+   *   services must be in the form '01230123-0123-0123-0123-012301230123'
+   * * `name` - exact device name
+   * * `namePrefix` - starting characters of device name
+   * * `id` - exact device address (`id:"e9:53:86:09:89:99 random"`) (this is
+   *   Espruino-specific, and is not part of the Web Bluetooth spec)
+   * * `serviceData` - an object containing **lowercase** service characteristics which must all
+   *   match (`serviceData:{"1809":{}}`). Matching of actual service data is not
+   *   supported yet.
+   * * `manufacturerData` - an object containing manufacturer UUIDs which must all
+   *   match (`manufacturerData:{0x0590:{}}`). Matching of actual manufacturer data
+   *   is not supported yet.
+   * ```
+   * NRF.requestDevice({ filters: [{ namePrefix: 'Puck.js' }] }).then(function(device) { ... });
+   * // or
+   * NRF.requestDevice({ filters: [{ services: ['1823'] }] }).then(function(device) { ... });
+   * // or
+   * NRF.requestDevice({ filters: [{ manufacturerData:{0x0590:{}} }] }).then(function(device) { ... });
+   * ```
+   * As a full example, to send data to another Puck.js to turn an LED on:
+   * ```
+   * var gatt;
+   * NRF.requestDevice({ filters: [{ namePrefix: 'Puck.js' }] }).then(function(device) {
+   *   return device.gatt.connect();
+   * }).then(function(g) {
+   *   gatt = g;
+   *   return gatt.getPrimaryService("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
+   * }).then(function(service) {
+   *   return service.getCharacteristic("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
+   * }).then(function(characteristic) {
+   *   return characteristic.writeValue("LED1.set()\n");
+   * }).then(function() {
+   *   gatt.disconnect();
+   *   console.log("Done!");
+   * });
+   * ```
+   * Or slightly more concisely, using ES6 arrow functions:
+   * ```
+   * var gatt;
+   * NRF.requestDevice({ filters: [{ namePrefix: 'Puck.js' }]}).then(
+   *   device => device.gatt.connect()).then(
+   *   g => (gatt=g).getPrimaryService("6e400001-b5a3-f393-e0a9-e50e24dcca9e")).then(
+   *   service => service.getCharacteristic("6e400002-b5a3-f393-e0a9-e50e24dcca9e")).then(
+   *   characteristic => characteristic.writeValue("LED1.reset()\n")).then(
+   *   () => { gatt.disconnect(); console.log("Done!"); } );
+   * ```
+   * Note that you have to keep track of the `gatt` variable so that you can
+   * disconnect the Bluetooth connection when you're done.
+   * **Note:** Using a filter in `NRF.requestDevice` filters each advertising packet
+   * individually. As soon as a matching advertisement is received,
+   * `NRF.requestDevice` resolves the promise and stops scanning. This means that if
+   * you filter based on a service UUID and a device advertises with multiple packets
+   * (or a scan response when `active:true`) only the packet matching the filter is
+   * returned - you may not get the device's name is that was in a separate packet.
+   * To aggregate multiple packets you can use `NRF.findDevices`.
+   *
+   * @param {any} options - Options used to filter the device to use
+   * @returns {any} A `Promise` that is resolved (or rejected) when the connection is complete
+   * @url http://www.espruino.com/Reference#l_NRF_requestDevice
+   */
+  static requestDevice(options?: { filters?: NRFFilters[], timeout?: number, active?: boolean, phy?: string, extended?: boolean }): Promise<any>;
+
+  /**
+   * Connect to a BLE device by MAC address. Returns a promise, the argument of which
+   * is the `BluetoothRemoteGATTServer` connection.
+   * ```
+   * NRF.connect("aa:bb:cc:dd:ee").then(function(server) {
+   *   // ...
+   * });
+   * ```
+   * This has the same effect as calling `BluetoothDevice.gatt.connect` on a
+   * `BluetoothDevice` requested using `NRF.requestDevice`. It just allows you to
+   * specify the address directly (without having to scan).
+   * You can use it as follows - this would connect to another Puck device and turn
+   * its LED on:
+   * ```
+   * var gatt;
+   * NRF.connect("aa:bb:cc:dd:ee random").then(function(g) {
+   *   gatt = g;
+   *   return gatt.getPrimaryService("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
+   * }).then(function(service) {
+   *   return service.getCharacteristic("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
+   * }).then(function(characteristic) {
+   *   return characteristic.writeValue("LED1.set()\n");
+   * }).then(function() {
+   *   gatt.disconnect();
+   *   console.log("Done!");
+   * });
+   * ```
+   * **Note:** Espruino Bluetooth devices use a type of BLE address known as 'random
+   * static', which is different to a 'public' address. To connect to an Espruino
+   * device you'll need to use an address string of the form `"aa:bb:cc:dd:ee
+   * random"` rather than just `"aa:bb:cc:dd:ee"`. If you scan for devices with
+   * `NRF.findDevices`/`NRF.setScan` then addresses are already reported in the
+   * correct format.
+   *
+   * @param {any} mac - The MAC address to connect to
+   * @param {any} options - (Espruino-specific) An object of connection options (see `BluetoothRemoteGATTServer.connect` for full details)
+   * @returns {any} A `Promise` that is resolved (or rejected) when the connection is complete
+   * @url http://www.espruino.com/Reference#l_NRF_connect
+   */
+  static connect(mac: any, options: any): Promise<void>;
+
+  /**
+   * If set to true, whenever a device bonds it will be added to the whitelist.
+   * When set to false, the whitelist is cleared and newly bonded devices will not be
+   * added to the whitelist.
+   * **Note:** This is remembered between `reset()`s but isn't remembered after
+   * power-on (you'll have to add it to `onInit()`.
+   *
+   * @param {boolean} whitelisting - Are we using a whitelist? (default false)
+   * @url http://www.espruino.com/Reference#l_NRF_setWhitelist
+   */
+  static setWhitelist(whitelisting: ShortBoolean): void;
+
+  /**
+   * When connected, Bluetooth LE devices communicate at a set interval. Lowering the
+   * interval (e.g. more packets/second) means a lower delay when sending data, higher
+   * bandwidth, but also more power consumption.
+   * By default, when connected as a peripheral Espruino automatically adjusts the
+   * connection interval. When connected it's as fast as possible (7.5ms) but when
+   * idle for over a minute it drops to 200ms. On continued activity (>1 BLE
+   * operation) the interval is raised to 7.5ms again.
+   * The options for `interval` are:
+   * * `undefined` / `"auto"` : (default) automatically adjust connection interval
+   * * `100` : set min and max connection interval to the same number (between 7.5ms
+   *   and 4000ms)
+   * * `{minInterval:20, maxInterval:100}` : set min and max connection interval as a
+   *   range
+   * This configuration is not remembered during a `save()` - you will have to re-set
+   * it via `onInit`.
+   * **Note:** If connecting to another device (as Central), you can use an extra
+   * argument to `NRF.connect` or `BluetoothRemoteGATTServer.connect` to specify a
+   * connection interval.
+   * **Note:** This overwrites any changes imposed by the deprecated
+   * `NRF.setLowPowerConnection`
+   *
+   * @param {any} interval - The connection interval to use (see below)
+   * @url http://www.espruino.com/Reference#l_NRF_setConnectionInterval
+   */
+  static setConnectionInterval(interval: any): void;
+
+  /**
+   * Sets the security options used when connecting/pairing. This applies to both
+   * central *and* peripheral mode.
+   * ```
+   * NRF.setSecurity({
+   *   display : bool  // default false, can this device display a passkey on a screen/etc?
+   *                   // - sent via the `BluetoothDevice.passkey` event
+   *   keyboard : bool // default false, can this device enter a passkey
+   *                   // - request sent via the `BluetoothDevice.passkeyRequest` event
+   *   pair : bool // default true, allow other devices to pair with this device
+   *   bond : bool // default true, Perform bonding
+   *               // This stores info from pairing in flash and allows reconnecting without having to pair each time
+   *   mitm : bool // default false, Man In The Middle protection
+   *   lesc : bool // default false, LE Secure Connections
+   *   passkey : // default "", or a 6 digit passkey to use (display must be true for this)
+   *   oob : [0..15] // if specified, Out Of Band pairing is enabled and
+   *                 // the 16 byte pairing code supplied here is used
+   *   encryptUart : bool // default false (unless oob or passkey specified)
+   *                      // This sets the BLE UART service such that it
+   *                      // is encrypted and can only be used from a paired connection
+   *   privacy : // default false, true to enable with (ideally sensible) defaults,
+   *             // or an object defining BLE privacy / random address options - see below for more info
+   *             // only available if Espruino was compiled with private address support (like for example on Bangle.js 2)
+   * });
+   * ```
+   * **NOTE:** Some combinations of arguments will cause an error. For example
+   * supplying a passkey without `display:1` is not allowed. If `display:1` is set
+   * you do not require a physical display, the user just needs to know the passkey
+   * you supplied.
+   * For instance, to require pairing and to specify a passkey, use:
+   * ```
+   * NRF.setSecurity({passkey:"123456", mitm:1, display:1});
+   * ```
+   * Or to require pairing and to display a PIN that the connecting device
+   * provides, use:
+   * ```
+   * NRF.setSecurity({mitm:1, display:1});
+   * NRF.on("passkey", key => print("Enter PIN: ", key));
+   * ```
+   * However, while most devices will request a passkey for pairing at this point it
+   * is still possible for a device to connect without requiring one (e.g. using the
+   * 'NRF Connect' app).
+   * To force a passkey you need to protect each characteristic you define with
+   * `NRF.setSecurity`. For instance the following code will *require* that the
+   * passkey `123456` is entered before the characteristic
+   * `9d020002-bf5f-1d1a-b52a-fe52091d5b12` can be read.
+   * ```
+   * NRF.setSecurity({passkey:"123456", mitm:1, display:1});
+   * NRF.setServices({
+   *   "9d020001-bf5f-1d1a-b52a-fe52091d5b12" : {
+   *     "9d020002-bf5f-1d1a-b52a-fe52091d5b12" : {
+   *       // readable always
+   *       value : "Not Secret"
+   *     },
+   *     "9d020003-bf5f-1d1a-b52a-fe52091d5b12" : {
+   *       // readable only once bonded
+   *       value : "Secret",
+   *       readable : true,
+   *       security: {
+   *         read: {
+   *           mitm: true,
+   *           encrypted: true
+   *         }
+   *       }
+   *     },
+   *     "9d020004-bf5f-1d1a-b52a-fe52091d5b12" : {
+   *       // readable always
+   *       // writable only once bonded
+   *       value : "Readable",
+   *       readable : true,
+   *       writable : true,
+   *       onWrite : function(evt) {
+   *         console.log("Wrote ", evt.data);
+   *       },
+   *       security: {
+   *         write: {
+   *           mitm: true,
+   *           encrypted: true
+   *         }
+   *       }
+   *     }
+   *   }
+   * });
+   * ```
+   * **Note:** If `passkey` or `oob` is specified, the Nordic UART service (if
+   * enabled) will automatically be set to require encryption, but otherwise it is
+   * open.
+   * On Bangle.js 2, the `privacy` parameter can be used to set this device's BLE privacy / random address settings.
+   * The privacy feature provides a way to avoid being tracked over a period of time.
+   * This works by replacing the real BLE address with a random private address,
+   * that automatically changes at a specified interval.
+   * If a `"random_private_resolvable"` address is used, that address is generated with the help
+   * of an identity resolving key (IRK), that is exchanged during bonding.
+   * This allows a bonded device to still identify another device that is using a random private resolvable address.
+   * Note that, while this can help against being tracked, there are other ways a Bluetooth device can reveal its identity.
+   * For example, the name or services it advertises may be unique enough.
+   * ```
+   * NRF.setSecurity({
+   *   privacy: {
+   *     mode : "off"/"device_privacy"/"network_privacy" // The privacy mode that should be used.
+   *     addr_type : "random_private_resolvable"/"random_private_non_resolvable" // The type of address to use.
+   *     addr_cycle_s : int // How often the address should change, in seconds.
+   *   }
+   * });
+   * // enabled with (ideally sensible) defaults of:
+   * // mode: device_privacy
+   * // addr_type: random_private_resolvable
+   * // addr_cycle_s: 0 (use default address change interval)
+   * NRF.setSecurity({
+   *   privacy: 1
+   * });
+   * ```
+   * `mode` can be one of:
+   * * `"off"` - Use the real address.
+   * * `"device_privacy"` - Use a private address.
+   * * `"network_privacy"` - Use a private address,
+   *                         and reject a peer that uses its real address if we know that peer's IRK.
+   * If `mode` is `"off"`, all other fields are ignored and become optional.
+   * `addr_type` can be one of:
+   * * `"random_private_resolvable"` - Address that can be resolved by a bonded peer that knows our IRK.
+   * * `"random_private_non_resolvable"` - Address that cannot be resolved.
+   * `addr_cycle_s` must be an integer. Pass `0` to use the default address change interval.
+   * The default is usually to change the address every 15 minutes (or 900 seconds).
+   *
+   * @param {any} options - An object containing security-related options (see below)
+   * @url http://www.espruino.com/Reference#l_NRF_setSecurity
+   */
+  static setSecurity(options: any): void;
+
+  /**
+   * Return an object with information about the security state of the current
+   * peripheral connection:
+   * ```
+   * {
+   *   connected       // The connection is active (not disconnected).
+   *   encrypted       // Communication on this link is encrypted.
+   *   mitm_protected  // The encrypted communication is also protected against man-in-the-middle attacks.
+   *   bonded          // The peer is bonded with us
+   *   advertising     // Are we currently advertising?
+   *   connected_addr  // If connected=true, the MAC address of the currently connected device
+   *   privacy         // Current BLE privacy / random address settings.
+   *                   // Only present if Espruino was compiled with private address support (like for example on Bangle.js 2).
+   * }
+   * ```
+   * If there is no active connection, `{connected:false}` will be returned.
+   * See `NRF.setSecurity` for information about negotiating a secure connection.
+   * @returns {any} An object
+   * @url http://www.espruino.com/Reference#l_NRF_getSecurityStatus
+   */
+  static getSecurityStatus(): NRFSecurityStatus;
+
+  /**
+   *
+   * @param {boolean} forceRepair - True if we should force repairing even if there is already valid pairing info
+   * @returns {any} A promise
+   * @url http://www.espruino.com/Reference#l_NRF_startBonding
+   */
+  static startBonding(forceRepair: ShortBoolean): any;
 
 
 }
 
 /**
  * A Web Bluetooth-style device - you can request one using
- * `NRF.requestDevice(address)`
+ * `NRF.requestDevice(options)`
  * For example:
  * ```
  * var gatt;
@@ -5170,7 +4950,7 @@ declare class BluetoothRemoteGATTServer {
    * @returns {any} A `Promise` that is resolved (or rejected) when the bonding is complete
    * @url http://www.espruino.com/Reference#l_BluetoothRemoteGATTServer_startBonding
    */
-  startBonding(forceRePair: boolean): Promise<void>;
+  startBonding(forceRePair: ShortBoolean): Promise<void>;
 
   /**
    * Return an object with information about the security state of the current
@@ -5443,8 +5223,8 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
   static getInstance(): Graphics | undefined
 
   /**
-   * Create a Graphics object that renders to an Array Buffer. This will have a field
-   * called 'buffer' that can get used to get at the buffer itself
+   * Create a `Graphics` object that renders to an `ArrayBuffer`. This will have a field
+   * called `'buffer'` that can get used to get at the buffer itself
    *
    * @param {number} width - Pixels wide
    * @param {number} height - Pixels high
@@ -5453,34 +5233,35 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
    * An object of other options. `{ zigzag : true/false(default), vertical_byte : true/false(default), msb : true/false(default), color_order: 'rgb'(default),'bgr',etc }`
    * `zigzag` = whether to alternate the direction of scanlines for rows
    * `vertical_byte` = whether to align bits in a byte vertically or not
-   * `msb` = when bits<8, store pixels most significant bit first, when bits>8, store most significant byte first
+   * `msb` = when bits<8, store pixels most significant bit first, when bits>8, store most significant byte first (as of 2v25, msb:true is default)
    * `interleavex` = Pixels 0,2,4,etc are from the top half of the image, 1,3,5,etc from the bottom half. Used for P3 LED panels.
    * `color_order` = re-orders the colour values that are supplied via setColor
-   * @returns {any} The new Graphics object
+   * `buffer` = if specified, createArrayBuffer won't create a new buffer but will use the given one
+   * @returns {any} The new `Graphics` object
    * @url http://www.espruino.com/Reference#l_Graphics_createArrayBuffer
    */
   static createArrayBuffer(width: number, height: number, bpp: number, options?: { zigzag?: boolean, vertical_byte?: boolean, msb?: boolean, color_order?: "rgb" | "rbg" | "brg" | "bgr" | "grb" | "gbr" }): Graphics<true>;
 
   /**
-   * Create a Graphics object that renders by calling a JavaScript callback function
+   * Create a `Graphics` object that renders by calling a JavaScript callback function
    * to draw pixels
    *
    * @param {number} width - Pixels wide
    * @param {number} height - Pixels high
    * @param {number} bpp - Number of bits per pixel
    * @param {any} callback - A function of the form ```function(x,y,col)``` that is called whenever a pixel needs to be drawn, or an object with: ```{setPixel:function(x,y,col),fillRect:function(x1,y1,x2,y2,col)}```. All arguments are already bounds checked.
-   * @returns {any} The new Graphics object
+   * @returns {any} The new `Graphics` object
    * @url http://www.espruino.com/Reference#l_Graphics_createCallback
    */
   static createCallback(width: number, height: number, bpp: number, callback: ((x: number, y: number, col: number) => void) | { setPixel: (x: number, y: number, col: number) => void; fillRect: (x1: number, y1: number, x2: number, y2: number, col: number) => void }): Graphics<false>;
 
   /**
-   * Create a Graphics object that renders to SDL window (Linux-based devices only)
+   * Create a `Graphics` object that renders to SDL window (Linux-based devices only)
    *
    * @param {number} width - Pixels wide
    * @param {number} height - Pixels high
    * @param {number} bpp - Bits per pixel (8,16,24 or 32 supported)
-   * @returns {any} The new Graphics object
+   * @returns {any} The new `Graphics` object
    * @url http://www.espruino.com/Reference#l_Graphics_createSDL
    */
   static createSDL(width: number, height: number, bpp: number): Graphics;
@@ -5517,38 +5298,31 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
   static createImage(str: string): ImageObject;
 
   /**
-   * Draw a filled arc between two angles
+   * Set the current font
    *
-   * @param {number} a1 - Angle 1 (radians)
-   * @param {number} a2 - Angle 2 (radians)
-   * @param {number} r - Radius
+   * @param {number} scale - The scale factor, default=1 (2=2x size)
    * @returns {any} The instance of Graphics this was called on, to allow call chaining
-   * @url http://www.espruino.com/Reference#l_Graphics_fillArc
+   * @url http://www.espruino.com/Reference#l_Graphics_setFont17
    */
-  fillArc(a1: number, a2: number, r: number): Graphics;
+  setFont17(scale: number): Graphics;
 
   /**
-   * Draw rectangle between angles a-ar and a+ar, and radius r1/r2
+   * Set the current font
    *
-   * @param {number} a - Angle (radians)
-   * @param {number} ar - Angle either side (radians)
-   * @param {number} r1 - Radius
-   * @param {number} r2 - Radius
+   * @param {number} scale - The scale factor, default=1 (2=2x size)
    * @returns {any} The instance of Graphics this was called on, to allow call chaining
-   * @url http://www.espruino.com/Reference#l_Graphics_fillSeg
+   * @url http://www.espruino.com/Reference#l_Graphics_setFont28
    */
-  fillSeg(a: number, ar: number, r1: number, r2: number): Graphics;
+  setFont28(scale: number): Graphics;
 
   /**
-   * Draw A line between angles a-ar and a+ar at radius r
+   * Set the current font
    *
-   * @param {number} a - Angle (radians)
-   * @param {number} ar - Angle either side (radians)
-   * @param {number} r - Radius
+   * @param {number} scale - The scale factor, default=1 (2=2x size)
    * @returns {any} The instance of Graphics this was called on, to allow call chaining
-   * @url http://www.espruino.com/Reference#l_Graphics_drawSeg
+   * @url http://www.espruino.com/Reference#l_Graphics_setFont22
    */
-  drawSeg(a: number, ar: number, r: number): Graphics;
+  setFont22(scale: number): Graphics;
 
   /**
    * Set the current font
@@ -5569,6 +5343,15 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
   setFont6x15(scale: number): Graphics;
 
   /**
+   * Set the current font
+   *
+   * @param {number} scale - The scale factor, default=1 (2=2x size)
+   * @returns {any} The instance of Graphics this was called on, to allow call chaining
+   * @url http://www.espruino.com/Reference#l_Graphics_setFont14
+   */
+  setFont14(scale: number): Graphics;
+
+  /**
    * On instances of graphics that drive a display with an offscreen buffer, calling
    * this function will copy the contents of the offscreen buffer to the screen.
    * Call this when you have drawn something to Graphics and you want it shown on the
@@ -5586,10 +5369,10 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
    * @param {boolean} [all] - [optional] (only on some devices) If `true` then copy all pixels, not just those that have changed.
    * @url http://www.espruino.com/Reference#l_Graphics_flip
    */
-  flip(all?: boolean): void;
+  flip(all?: ShortBoolean): void;
 
   /**
-   * On Graphics instances with an offscreen buffer, this is an `ArrayBuffer` that
+   * On `Graphics` instances with an offscreen buffer, this is an `ArrayBuffer` that
    * provides access to the underlying pixel data.
    * ```
    * g=Graphics.createArrayBuffer(8,8,8)
@@ -5605,32 +5388,32 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
    * 0, 0, 0, 0, 0, 0, 255, 0,
    * 0, 0, 0, 0, 0, 0, 0, 255])
    * ```
-   * @returns {any} An ArrayBuffer (or not defined on Graphics instances not created with `Graphics.createArrayBuffer`)
+   * @returns {any} An ArrayBuffer (or not defined on `Graphics` instances not created with `Graphics.createArrayBuffer`)
    * @url http://www.espruino.com/Reference#l_Graphics_buffer
    */
   buffer: IsBuffer extends true ? ArrayBuffer : undefined
 
   /**
-   * The width of this Graphics instance
-   * @returns {number} The width of this Graphics instance
+   * The width of this `Graphics` instance
+   * @returns {number} The width of this `Graphics` instance
    * @url http://www.espruino.com/Reference#l_Graphics_getWidth
    */
   getWidth(): number;
 
   /**
-   * The height of this Graphics instance
-   * @returns {number} The height of this Graphics instance
+   * The height of this `Graphics` instance
+   * @returns {number} The height of this `Graphics` instance
    * @url http://www.espruino.com/Reference#l_Graphics_getHeight
    */
   getHeight(): number;
 
   /**
-   * The number of bits per pixel of this Graphics instance
+   * The number of bits per pixel of this `Graphics` instance
    * **Note:** Bangle.js 2 behaves a little differently here. The display is 3 bit,
    * so `getBPP` returns 3 and `asBMP`/`asImage`/etc return 3 bit images. However in
    * order to allow dithering, the colors returned by `Graphics.getColor` and
    * `Graphics.theme` are actually 16 bits.
-   * @returns {number} The bits per pixel of this Graphics instance
+   * @returns {number} The bits per pixel of this `Graphics` instance
    * @url http://www.espruino.com/Reference#l_Graphics_getBPP
    */
   getBPP(): number;
@@ -5641,7 +5424,7 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
    * @returns {any} The instance of Graphics this was called on, to allow call chaining
    * @url http://www.espruino.com/Reference#l_Graphics_reset
    */
-  reset(): Graphics;
+  reset(reason?: String): Graphics;
 
   /**
    * Clear the LCD with the Background Color
@@ -5650,7 +5433,7 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
    * @returns {any} The instance of Graphics this was called on, to allow call chaining
    * @url http://www.espruino.com/Reference#l_Graphics_clear
    */
-  clear(reset?: boolean): Graphics;
+  clear(reset?: ShortBoolean): Graphics;
 
   /**
    * Fill a rectangular area in the Foreground Color
@@ -5795,7 +5578,7 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
    * g.toColor(1,0,0) => 0xF800
    * ```
    *
-   * @param {any} r - Red (between 0 and 1) **OR** an integer representing the color in the current bit depth and color order **OR** a hexidecimal color string of the form `'#rrggbb' or `'#rgb'`
+   * @param {any} r - Red (between 0 and 1) **OR** an integer representing the color in the current bit depth and color order **OR** a hexidecimal color string of the form `'#rrggbb'` or `'#rgb'`
    * @param {any} g - Green (between 0 and 1)
    * @param {any} b - Blue (between 0 and 1)
    * @returns {number} The color index represented by the arguments
@@ -6011,7 +5794,7 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
 
   /**
    * Return the width and height in pixels of a string of text in the current font. The object returned contains:
-   * ```JS
+   * ```
    * {
    *   width,              // Width of the string in pixels
    *   height,             // Height of the string in pixels
@@ -6041,6 +5824,34 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
    * @url http://www.espruino.com/Reference#l_Graphics_wrapString
    */
   wrapString(str: string, maxWidth: number): string[];
+
+  /**
+   * Works out which font to use, and sets the current font to it.
+   * Usage:
+   * ```
+   * g.findFont("Hello World", {
+   *   w : 100,    // optional: width available (default = screen width)
+   *   h : 100,    // optional: height available (default = screen height)
+   *   min : 10,   // optional: min font height
+   *   max : 30,   // optional: max font height
+   *   wrap : true // optional: allow word wrap?
+   *   trim : true // optional: trim to the specified height, add '...'
+   * });
+   * ```
+   * Returns:
+   * ```
+   * {
+   *   text : "Hello\nWorld"
+   *   font : "..."
+   * }
+   * ```
+   *
+   * @param {any} text - The text to render
+   * @param {any} options - Options for finding the required font
+   * @returns {any} An object containing info about the font
+   * @url http://www.espruino.com/Reference#l_Graphics_findFont
+   */
+  findFont(text: any, options: any): any;
 
   /**
    * Draw a string of text in the current font.
@@ -6251,8 +6062,8 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
    * * A String where the the first few bytes are:
    *   `width,height,bpp,[transparent,]image_bytes...`. If a transparent colour is
    *   specified the top bit of `bpp` should be set.
-   * * An ArrayBuffer Graphics object (if `bpp<8`, `msb:true` must be set) - this is
-   *   disabled on devices without much flash memory available. If a Graphics object
+   * * An ArrayBuffer `Graphics` object (if `bpp<8`, `msb:true` must be set) - this is
+   *   disabled on devices without much flash memory available. If a `Graphics` object
    *   is supplied, it can also contain transparent/palette fields as if it were
    *   an image.
    * See https://www.espruino.com/Graphics#images-bitmaps for more information about
@@ -6329,14 +6140,19 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
   drawImages(layers: { x: number, y: number, image: Image, scale?: number, rotate?: number, center?: boolean, repeat?: boolean, nobounds?: boolean }[], options?: { x: number, y: number, width: number, height: number }): Graphics;
 
   /**
-   * Return this Graphics object as an Image that can be used with
+   * Return this `Graphics` object as an Image that can be used with
    * `Graphics.drawImage`. Check out [the Graphics reference
    * page](http://www.espruino.com/Graphics#images-bitmaps) for more information on
    * images.
    * Will return undefined if data can't be allocated for the image.
+   * `options` can be either:
+   * * `undefined` or `"object"` - return an image object
+   * * `string` - return the image as a string
+   * * (in 2v26 onwards) `{type:undefined/"object"/"string", x,y,w,h}` - Return only a part of the image as an object/string.
    * The image data itself will be referenced rather than copied if:
    * * An image `object` was requested (not `string`)
-   * * The Graphics instance was created with `Graphics.createArrayBuffer`
+   * * `x`/`y` are 0 and `w`/`h` are the graphics's height
+   * * The `Graphics` instance was created with `Graphics.createArrayBuffer`
    * * Is 8 bpp *OR* the `{msb:true}` option was given
    * * No other format options (zigzag/etc) were given
    * Otherwise data will be copied, which takes up more space and may be quite slow.
@@ -6350,12 +6166,14 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
    * var im = gfx.asImage("string");
    * ```
    *
-   * @param {any} type - The type of image to return. Either `object`/undefined to return an image object, or `string` to return an image string
+   * @param {any} options - The type of image to return as a string, or an object `{x,y,w,h,type}` (see below)
    * @returns {any} An Image that can be used with `Graphics.drawImage`
    * @url http://www.espruino.com/Reference#l_Graphics_asImage
    */
   asImage(type?: "object"): ImageObject;
   asImage(type: "string"): string;
+  asImage(layers: { type?: "object", x?: number, y?: number, w?: number, h?: number }): ImageObject;
+  asImage(layers: { type: "string", x?: number, y?: number, w?: number, h?: number }): string;
 
   /**
    * Return the area of the Graphics canvas that has been modified, and optionally
@@ -6402,7 +6220,7 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
   blit(options: { x1: number, y1: number, x2: number, y2: number, w: number, h: number, setModified?: boolean }): Graphics;
 
   /**
-   * Create a Windows BMP file from this Graphics instance, and return it as a
+   * Create a Windows BMP file from this `Graphics` instance, and return it as a
    * String.
    * @returns {any} A String representing the Graphics as a Windows BMP file (or 'undefined' if not possible)
    * @url http://www.espruino.com/Reference#l_Graphics_asBMP
@@ -6425,9 +6243,9 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
    * inline automatically.
    * This is identical to `console.log(g.asURL())` - it is just a convenient function
    * for easy debugging and producing screenshots of what is currently in the
-   * Graphics instance.
-   * **Note:** This may not work on some bit depths of Graphics instances. It will
-   * also not work for the main Graphics instance of Bangle.js 1 as the graphics on
+   * `Graphics` instance.
+   * **Note:** This may not work on some bit depths of `Graphics` instances. It will
+   * also not work for the main `Graphics` instance of Bangle.js 1 as the graphics on
    * Bangle.js 1 are stored in write-only memory.
    * @url http://www.espruino.com/Reference#l_Graphics_dump
    */
@@ -6479,8 +6297,8 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
   transformVertices(arr: number[], transformation: { x?: number, y?: number, scale?: number, rotate?: number } | [number, number, number, number, number, number]): number[];
 
   /**
-   * Flood fills the given Graphics instance out from a particular point.
-   * **Note:** This only works on Graphics instances that support readback with `getPixel`. It
+   * Flood fills the given `Graphics` instance out from a particular point.
+   * **Note:** This only works on `Graphics` instances that support readback with `getPixel`. It
    * is also not capable of filling over dithered patterns (eg non-solid colours on Bangle.js 2)
    *
    * @param {number} x - X coordinate to start from
@@ -6505,7 +6323,7 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
    * }
    * ```
    * These values can then be passed to `g.setColor`/`g.setBgColor` for example
-   * `g.setColor(g.theme.fg2)`. When the Graphics instance is reset, the background
+   * `g.setColor(g.theme.fg2)`. When the `Graphics` instance is reset, the background
    * color is automatically set to `g.theme.bg` and foreground is set to
    * `g.theme.fg`.
    * On Bangle.js these values can be changed by writing updated values to `theme` in
@@ -6532,8 +6350,8 @@ declare class Graphics<IsBuffer extends boolean = boolean> {
   setTheme(theme: { [key in keyof Theme]?: Theme[key] extends number ? ColorResolvable : Theme[key] }): Graphics;
 
   /**
-   * Perform a filter on the current Graphics instance. Requires the Graphics
-   * instance to support readback (eg `getPixel` should work), and only uses
+   * Perform a filter on the current `Graphics` instance. Requires the Graphics
+   * instance to support readback (eg `.getPixel` should work), and only uses
    * 8 bit values for buffer and filter.
    * ```
    * g.filter([ // a gaussian filter
@@ -6584,7 +6402,7 @@ declare class WioLTE {
    * @param {boolean} onoff - Whether to turn the Grove connectors power on or off (D38/D39 are always powered)
    * @url http://www.espruino.com/Reference#l_WioLTE_setGrovePower
    */
-  static setGrovePower(onoff: boolean): void;
+  static setGrovePower(onoff: ShortBoolean): void;
 
   /**
    * Turn power to the WIO's LED on or off.
@@ -6594,7 +6412,7 @@ declare class WioLTE {
    * @param {boolean} onoff - true = on, false = off
    * @url http://www.espruino.com/Reference#l_WioLTE_setLEDPower
    */
-  static setLEDPower(onoff: boolean): void;
+  static setLEDPower(onoff: ShortBoolean): void;
 
   /**
    * @returns {any}
@@ -6642,32 +6460,84 @@ declare class WioLTE {
  */
 declare class Waveform {
   /**
+   * Event emitted when playback has finished
+   * @param {string} event - The event to listen to.
+   * @param {(buffer: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * * `buffer` the last played buffer
+   * @url http://www.espruino.com/Reference#l_Waveform_finish
+   */
+  static on(event: "finish", callback: (buffer: any) => void): void;
+
+  /**
+   * When in double-buffered mode, this event is emitted when the `Waveform` class swaps to playing a new buffer - so you should then fill this current buffer up with new data.
+   * @param {string} event - The event to listen to.
+   * @param {(buffer: any) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * * `buffer` the last played buffer (which now needs to be filled ready for playback)
+   * @url http://www.espruino.com/Reference#l_Waveform_buffer
+   */
+  static on(event: "buffer", callback: (buffer: any) => void): void;
+
+  /**
    * Create a waveform class. This allows high speed input and output of waveforms.
    * It has an internal variable called `buffer` (as well as `buffer2` when
    * double-buffered - see `options` below) which contains the data to input/output.
+   * Options can contain:
+   * ```
+   * {
+   *   doubleBuffer : bool   // whether to allocate two buffers or not (default false)
+   *   bits         : 8/16   // the amount of bits to use (default 8).
+   * }
+   * ```
    * When double-buffered, a 'buffer' event will be emitted each time a buffer is
    * finished with (the argument is that buffer). When the recording stops, a
    * 'finish' event will be emitted (with the first argument as the buffer).
+   * ```
+   * // Output a sine wave
+   * var w = new Waveform(1000);
+   * for (var i=0;i<1000;i++) w.buffer[i]=128+120*Math.sin(i/2);
+   * analogWrite(H0, 0.5, {freq:80000}); // set up H0 to output an analog value by PWM
+   * w.on("finish", () => print("Done!"))
+   * w.startOutput(H0,8000); // start playback
+   * ```
+   * ```
+   * // On 2v25, from Storage
+   * var f = require("Storage").read("sound.pcm");
+   * var w = new Waveform(E.toArrayBuffer(f));
+   * w.on("finish", () => print("Done!"))
+   * w.startOutput(H0,8000); // start playback
+   * ```
+   * See https://www.espruino.com/Waveform for more examples.
    * @constructor
    *
-   * @param {number} samples - The number of samples
-   * @param {any} options - Optional options struct `{doubleBuffer:bool, bits : 8/16}` where: `doubleBuffer` is whether to allocate two buffers or not (default false), and bits is the amount of bits to use (default 8).
+   * @param {any} samples - The number of samples to allocate as an integer, *or* an arraybuffer (2v25+) containing the samples
+   * @param {any} [options] - [optional] options struct `{ doubleBuffer:bool, bits : 8/16 }` (see below)
    * @returns {any} An Waveform object
    * @url http://www.espruino.com/Reference#l_Waveform_Waveform
    */
-  static new(samples: number, options: any): any;
+  static new(samples: any, options?: any): any;
 
   /**
    * Will start outputting the waveform on the given pin - the pin must have
    * previously been initialised with analogWrite. If not repeating, it'll emit a
    * `finish` event when it is done.
+   * ```
+   * {
+   *   time : float,        // the that the waveform with start output at, e.g. `getTime()+1` (otherwise it is immediate)
+   *   repeat : bool,       // whether to repeat the given sample
+   *   npin : Pin,          // If specified, the waveform is output across two pins (see below)
+   * }
+   * ```
+   * Using `npin` allows you to split the Waveform output between two pins and hence avoid
+   * any DC bias (or need to capacitor), for instance you could attach a speaker to `H0` and
+   * `H1` on Jolt.js. When the value in the waveform was at 50% both outputs would be 0,
+   * below 50% the signal would be on `npin` with `pin` as 0, and above 50% it would be on `pin` with `npin` as 0.
    *
    * @param {Pin} output - The pin to output on
    * @param {number} freq - The frequency to output each sample at
-   * @param {any} options - Optional options struct `{time:float,repeat:bool}` where: `time` is the that the waveform with start output at, e.g. `getTime()+1` (otherwise it is immediate), `repeat` is a boolean specifying whether to repeat the give sample
+   * @param {any} [options] - [optional] options struct `{time:float, repeat:bool, npin:Pin}` (see below)
    * @url http://www.espruino.com/Reference#l_Waveform_startOutput
    */
-  startOutput(output: Pin, freq: number, options: any): void;
+  startOutput(output: Pin, freq: number, options?: any): void;
 
   /**
    * Will start inputting the waveform on the given pin that supports analog. If not
@@ -6675,10 +6545,10 @@ declare class Waveform {
    *
    * @param {Pin} output - The pin to output on
    * @param {number} freq - The frequency to output each sample at
-   * @param {any} options - Optional options struct `{time:float,repeat:bool}` where: `time` is the that the waveform with start output at, e.g. `getTime()+1` (otherwise it is immediate), `repeat` is a boolean specifying whether to repeat the give sample
+   * @param {any} [options] - [optional] options struct `{time:float,repeat:bool}` where: `time` is the that the waveform with start output at, e.g. `getTime()+1` (otherwise it is immediate), `repeat` is a boolean specifying whether to repeat the give sample
    * @url http://www.espruino.com/Reference#l_Waveform_startInput
    */
-  startInput(output: Pin, freq: number, options: any): void;
+  startInput(output: Pin, freq: number, options?: any): void;
 
   /**
    * Stop a waveform that is currently outputting
@@ -7280,8 +7150,8 @@ interface Uint8ArrayConstructor {
    * @constructor
    *
    * @param {any} arr - The array or typed array to base this off, or an integer which is the array length
-   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an ArrayBuffer)
-   * @param {number} length - The length (ONLY IF the first argument was an ArrayBuffer)
+   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an `ArrayBuffer`)
+   * @param {number} length - The length (ONLY IF the first argument was an `ArrayBuffer`)
    * @returns {any} A typed array
    * @url http://www.espruino.com/Reference#l_Uint8Array_Uint8Array
    */
@@ -7305,8 +7175,8 @@ interface Uint8ClampedArrayConstructor {
    * @constructor
    *
    * @param {any} arr - The array or typed array to base this off, or an integer which is the array length
-   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an ArrayBuffer)
-   * @param {number} length - The length (ONLY IF the first argument was an ArrayBuffer)
+   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an `ArrayBuffer`)
+   * @param {number} length - The length (ONLY IF the first argument was an `ArrayBuffer`)
    * @returns {any} A typed array
    * @url http://www.espruino.com/Reference#l_Uint8ClampedArray_Uint8ClampedArray
    */
@@ -7328,8 +7198,8 @@ interface Int8ArrayConstructor {
    * @constructor
    *
    * @param {any} arr - The array or typed array to base this off, or an integer which is the array length
-   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an ArrayBuffer)
-   * @param {number} length - The length (ONLY IF the first argument was an ArrayBuffer)
+   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an `ArrayBuffer`)
+   * @param {number} length - The length (ONLY IF the first argument was an `ArrayBuffer`)
    * @returns {any} A typed array
    * @url http://www.espruino.com/Reference#l_Int8Array_Int8Array
    */
@@ -7351,8 +7221,8 @@ interface Uint16ArrayConstructor {
    * @constructor
    *
    * @param {any} arr - The array or typed array to base this off, or an integer which is the array length
-   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an ArrayBuffer)
-   * @param {number} length - The length (ONLY IF the first argument was an ArrayBuffer)
+   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an `ArrayBuffer`)
+   * @param {number} length - The length (ONLY IF the first argument was an `ArrayBuffer`)
    * @returns {any} A typed array
    * @url http://www.espruino.com/Reference#l_Uint16Array_Uint16Array
    */
@@ -7374,8 +7244,8 @@ interface Int16ArrayConstructor {
    * @constructor
    *
    * @param {any} arr - The array or typed array to base this off, or an integer which is the array length
-   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an ArrayBuffer)
-   * @param {number} length - The length (ONLY IF the first argument was an ArrayBuffer)
+   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an `ArrayBuffer`)
+   * @param {number} length - The length (ONLY IF the first argument was an `ArrayBuffer`)
    * @returns {any} A typed array
    * @url http://www.espruino.com/Reference#l_Int16Array_Int16Array
    */
@@ -7406,8 +7276,8 @@ declare class Uint24Array {
    * @constructor
    *
    * @param {any} arr - The array or typed array to base this off, or an integer which is the array length
-   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an ArrayBuffer)
-   * @param {number} length - The length (ONLY IF the first argument was an ArrayBuffer)
+   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an `ArrayBuffer`)
+   * @param {number} length - The length (ONLY IF the first argument was an `ArrayBuffer`)
    * @returns {any} A typed array
    * @url http://www.espruino.com/Reference#l_Uint24Array_Uint24Array
    */
@@ -7427,8 +7297,8 @@ interface Uint32ArrayConstructor {
    * @constructor
    *
    * @param {any} arr - The array or typed array to base this off, or an integer which is the array length
-   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an ArrayBuffer)
-   * @param {number} length - The length (ONLY IF the first argument was an ArrayBuffer)
+   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an `ArrayBuffer`)
+   * @param {number} length - The length (ONLY IF the first argument was an `ArrayBuffer`)
    * @returns {any} A typed array
    * @url http://www.espruino.com/Reference#l_Uint32Array_Uint32Array
    */
@@ -7450,8 +7320,8 @@ interface Int32ArrayConstructor {
    * @constructor
    *
    * @param {any} arr - The array or typed array to base this off, or an integer which is the array length
-   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an ArrayBuffer)
-   * @param {number} length - The length (ONLY IF the first argument was an ArrayBuffer)
+   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an `ArrayBuffer`)
+   * @param {number} length - The length (ONLY IF the first argument was an `ArrayBuffer`)
    * @returns {any} A typed array
    * @url http://www.espruino.com/Reference#l_Int32Array_Int32Array
    */
@@ -7473,8 +7343,8 @@ interface Float32ArrayConstructor {
    * @constructor
    *
    * @param {any} arr - The array or typed array to base this off, or an integer which is the array length
-   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an ArrayBuffer)
-   * @param {number} length - The length (ONLY IF the first argument was an ArrayBuffer)
+   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an `ArrayBuffer`)
+   * @param {number} length - The length (ONLY IF the first argument was an `ArrayBuffer`)
    * @returns {any} A typed array
    * @url http://www.espruino.com/Reference#l_Float32Array_Float32Array
    */
@@ -7496,8 +7366,8 @@ interface Float64ArrayConstructor {
    * @constructor
    *
    * @param {any} arr - The array or typed array to base this off, or an integer which is the array length
-   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an ArrayBuffer). Maximum 65535.
-   * @param {number} length - The length (ONLY IF the first argument was an ArrayBuffer)
+   * @param {number} byteOffset - The byte offset in the ArrayBuffer  (ONLY IF the first argument was an `ArrayBuffer`). Maximum 65535.
+   * @param {number} length - The length (ONLY IF the first argument was an `ArrayBuffer`)
    * @returns {any} A typed array
    * @url http://www.espruino.com/Reference#l_Float64Array_Float64Array
    */
@@ -7869,10 +7739,23 @@ interface MathConstructor {
   pow(x: number, y: number): number;
 
   /**
-   * @returns {number} A random number between 0 and 1
+   * @returns {number} A random number X, where `0 <= X < 1`
    * @url http://www.espruino.com/Reference#l_Math_random
    */
   random(): number;
+
+  /**
+   * (Added in 2v25) Returns a random integer `X`, where `0 <= X < range`, or `-2147483648 <= X <= 2147483647` if `range <= 0` or `undefined`
+   * If `range` is supplied, this value is created using `modulo` of a 31 bit integer, so as `val` gets larger (24+ bits)
+   * the values produced will be less randomly distributed, and no values above `0x7FFFFFFF` will ever be returned.
+   * If `val==undefined` or `val<=0` a **32 bit** random number will be returned as an int (`-2147483648` .. `2147483647`).
+   * **Note:** this is not part of the JS spec, but is included in Espruino as it makes a lot of sense on embedded targets
+   *
+   * @param {number} range - How big a random number do we want
+   * @returns {number} A random integer
+   * @url http://www.espruino.com/Reference#l_Math_randInt
+   */
+  randInt(range: number): number;
 
   /**
    *
@@ -8159,21 +8042,6 @@ declare class E {
   static showAlert(message?: string, options?: string): Promise<void>;
 
   /**
-   * @url http://www.espruino.com/Reference#l_E_showMenu
-   */
-  static showMenu(): void;
-
-  /**
-   * @url http://www.espruino.com/Reference#l_E_showPrompt
-   */
-  static showPrompt(): void;
-
-  /**
-   * @url http://www.espruino.com/Reference#l_E_showMessage
-   */
-  static showMessage(): void;
-
-  /**
    * Setup the filesystem so that subsequent calls to `E.openFile` and
    * `require('fs').*` will use an SD card on the supplied SPI device and pin.
    * It can even work using software SPI - for instance:
@@ -8217,36 +8085,6 @@ declare class E {
    * @url http://www.espruino.com/Reference#l_E_openFile
    */
   static openFile(path: any, mode: any): File;
-
-  /**
-   * Change the parameters used for the flash filesystem. The default address is the
-   * last 1Mb of 4Mb Flash, 0x300000, with total size of 1Mb.
-   * Before first use the media needs to be formatted.
-   * ```
-   * fs=require("fs");
-   * try {
-   *   fs.readdirSync();
-   *  } catch (e) { //'Uncaught Error: Unable to mount media : NO_FILESYSTEM'
-   *   console.log('Formatting FS - only need to do once');
-   *   E.flashFatFS({ format: true });
-   * }
-   * fs.writeFileSync("bang.txt", "This is the way the world ends\nnot with a bang but a whimper.\n");
-   * fs.readdirSync();
-   * ```
-   * This will create a drive of 100 * 4096 bytes at 0x300000. Be careful with the
-   * selection of flash addresses as you can overwrite firmware! You only need to
-   * format once, as each will erase the content.
-   * `E.flashFatFS({ addr:0x300000,sectors:100,format:true });`
-   *
-   * @param {any} [options]
-   * [optional] An object `{ addr : int=0x300000, sectors : int=256, format : bool=false }`
-   * addr : start address in flash
-   * sectors: number of sectors to use
-   * format:  Format the media
-   * @returns {boolean} True on success, or false on failure
-   * @url http://www.espruino.com/Reference#l_E_flashFatFS
-   */
-  static flashFatFS(options?: any): boolean;
 
   /**
    * Display a menu on the screen, and set up the buttons to navigate through it.
@@ -8294,6 +8132,10 @@ declare class E {
    *     menu is removed
    *   * (Bangle.js 2) `scroll : int` - an integer specifying how much the initial
    *     menu should be scrolled by
+   * * (Bangle.js 2) The mapped functions can consider the touch event that interacted with the entry:
+   *   `"Entry" : function(touch) { ... }`
+   *   * This is also true of `onchange` mapped functions in entry objects:
+   *     `onchange : (value, touch) => { ... }`
    * * The object returned by `E.showMenu` contains:
    *   * (Bangle.js 2) `scroller` - the object returned by `E.showScroller` -
    *     `scroller.scroll` returns the amount the menu is currently scrolled by
@@ -8373,7 +8215,8 @@ declare class E {
    *   title: "Hello",                       // optional Title
    *   buttons : {"Ok":true,"Cancel":false}, // optional list of button text & return value
    *   img: "image_string"                   // optional image string to draw
-   *   remove: function() { }                // Bangle.js: optional function to be called when the prompt is removed
+   *   remove: function() { }                // Bangle.js: optional function to be called when the prompt is removed#
+   *   buttonHeight : 30,                    // Bangle.js2: optional height to force the buttons to be
    * }
    * ```
    *
@@ -8382,7 +8225,7 @@ declare class E {
    * @returns {any} A promise that is resolved when 'Ok' is pressed
    * @url http://www.espruino.com/Reference#l_E_showPrompt
    */
-  static showPrompt<T = boolean>(message: string, options?: { title?: string, buttons?: { [key: string]: T }, image?: string, remove?: () => void }): Promise<T>;
+  static showPrompt<T = boolean>(message: string, options?: { title?: string, buttons?: { [key: string]: T }, buttonHeight?: number, image?: string, remove?: () => void }): Promise<T>;
   static showPrompt(): void;
 
   /**
@@ -8397,6 +8240,7 @@ declare class E {
    *   draw : function(idx, rect) { ... }
    *   // a function to call when the item is selected, touch parameter is only relevant
    *   // for Bangle.js 2 and contains the coordinates touched inside the selected item
+   *   // as well as the type of the touch - see `Bangle.touch`.
    *   select : function(idx, touch) { ... }
    *   // optional function to be called when 'back' is tapped
    *   back : function() { ...}
@@ -8748,6 +8592,35 @@ declare class E {
   static kickWatchdog(): void;
 
   /**
+   * Called when a bit rises or falls above a set level. See `E.setComparator` for setup.
+   * @param {string} event - The event to listen to.
+   * @param {(dir: number) => void} callback - A function that is executed when the event occurs. Its arguments are:
+   * * `dir` The direction of the pin's state change
+   * @url http://www.espruino.com/Reference#l_E_comparator
+   */
+  static on(event: "comparator", callback: (dir: number) => void): void;
+
+  /**
+   * (Added 2v25) Enable the nRF52 chip's `LPCOMP` hardware. When enabled, it creates an `E.on("comparator", ...)`
+   * event whenever the pin supplied rises or falls past the setpoint given (with 50mv hysteresis).
+   * ```
+   * E.setComparator(D28, 8/16); // compare with VDD/2
+   * E.on("comparator", e => {
+   *   print(e); // 1 for up, or -1 for down
+   * });
+   * ```
+   * **Note:** There is just one LPCOMP, so you can only enable the comparator on one pin.
+   * **On [Jolt.js](https://www.espruino.com/Jolt.js):** when using `E.setComparator` on the analog pins on the
+   * Terminal block (`H0`/`H2`/`H4`/`H6`), the `level` you give needs to be in volts. Because the comparator only
+   * works in 16 steps, you can only detect multiples of 1.37v (1.37/2.74/4.11/etc)
+   *
+   * @param {Pin} pin - The `Pin` to enable the comparator on
+   * @param {number} level - The level to trigger on, or `undefined` to disable. (see below for [Jolt.js](https://www.espruino.com/Jolt.js))
+   * @url http://www.espruino.com/Reference#l_E_setComparator
+   */
+  static setComparator(pin: Pin, level: number): void;
+
+  /**
    * Get and reset the error flags. Returns an array that can contain:
    * `'FIFO_FULL'`: The receive FIFO filled up and data was lost. This could be state
    * transitions for setWatch, or received characters.
@@ -8835,7 +8708,7 @@ declare class E {
    * Note that this is an ArrayBuffer, not a Uint8Array. To get one of those, do:
    * `new Uint8Array(E.toArrayBuffer('....'))`.
    *
-   * @param {any} str - The string to convert to an ArrayBuffer
+   * @param {any} str - The string to convert to an `ArrayBuffer`
    * @returns {any} An ArrayBuffer that uses the given string
    * @url http://www.espruino.com/Reference#l_E_toArrayBuffer
    */
@@ -8852,12 +8725,16 @@ declare class E {
    * flat string of the same length, the backing string will be returned without
    * doing a copy or other allocation. The same applies if there's a single argument
    * which is itself a flat string.
-   * ```JS
+   * ```
    * E.toString(0,1,2,"Hi",3)
    * "\0\1\2Hi\3"
+   * ```
+   * ```
    * E.toString(1,2,{data:[3,4], count:4},5,6)
    * "\1\2\3\4\3\4\3\4\3\4\5\6"
-   * >E.toString(1,2,{callback : () => "Hello World"},5,6)
+   * ```
+   * ```
+   * E.toString(1,2,{callback : () => "Hello World"},5,6)
    * ="\1\2Hello World\5\6"
    * ```
    * **Note:** Prior to Espruino 2v18 `E.toString` would always return a flat string,
@@ -8934,7 +8811,7 @@ declare class E {
   static isUTF8(str: any): boolean;
 
   /**
-   * This creates a Uint8Array from the given arguments. These are handled as
+   * This creates a `Uint8Array` from the given arguments. These are handled as
    * follows:
    *  * `Number` -> read as an integer, using the lowest 8 bits
    *  * `String` -> use each character's numeric value (e.g.
@@ -8958,7 +8835,7 @@ declare class E {
    * =new Uint8Array([104, 105, 1, 2, 3])
    * ```
    *
-   * @param {any} args - The arguments to convert to a Uint8Array
+   * @param {any} args - The arguments to convert to a `Uint8Array`
    * @returns {any} A Uint8Array
    * @url http://www.espruino.com/Reference#l_E_toUint8Array
    */
@@ -9046,6 +8923,23 @@ declare class E {
    * @url http://www.espruino.com/Reference#l_E_setClock
    */
   static setClock(options: number | { M: number, N: number, P: number, Q: number, latency?: number, PCLK?: number, PCLK2?: number }): number;
+
+  /**
+   * On boards other than STM32 this currently just returns `undefined`
+   * ### STM32
+   * See `E.setClock` for more information.
+   * Returns:
+   * ```
+   * {
+   *   sysclk, hclk, pclk1, pclk2,  // various clocks in Hz
+   *   M, N, P, Q, PCLK1, PCLK2     // STM32F4: currently set divisors
+   *   RTCCLKSource : "LSI/LSE/HSE_Div#" // STM32F4 source for RTC clock
+   * }
+   * ```
+   * @returns {any} An object containing information about the current clock
+   * @url http://www.espruino.com/Reference#l_E_getClock
+   */
+  static getClock(): any;
 
   /**
    * Changes the device that the JS console (otherwise known as the REPL) is attached
@@ -9186,7 +9080,7 @@ declare class E {
    * @returns {number} The address of the given variable
    * @url http://www.espruino.com/Reference#l_E_getAddressOf
    */
-  static getAddressOf(v: any, flatAddress: boolean): number;
+  static getAddressOf(v: any, flatAddress: ShortBoolean): number;
 
   /**
    * Take each element of the `from` array, look it up in `map` (or call
@@ -9444,6 +9338,15 @@ declare class E {
   static reboot(): void;
 
   /**
+   * Forces a hard reboot of the microcontroller into DFU mode.
+   * If this is an ST device, this will be the ST DFU mode.
+   * If this device has an UF2 bootloader, it will reappear as a USB drive, onto which you can copy new firmware.
+   * **Note:** The device will stay in DFU mode until it is power-cycled or reset.
+   * @url http://www.espruino.com/Reference#l_E_rebootToDFU
+   */
+  static rebootToDFU(): void;
+
+  /**
    * USB HID will only take effect next time you unplug and re-plug your Espruino. If
    * you're disconnecting it from power you'll have to make sure you have `save()`d
    * after calling this function.
@@ -9519,7 +9422,7 @@ declare class E {
    * @returns {number} The RTC prescaler's current value
    * @url http://www.espruino.com/Reference#l_E_getRTCPrescaler
    */
-  static getRTCPrescaler(calibrate: boolean): number;
+  static getRTCPrescaler(calibrate: ShortBoolean): number;
 
   /**
    * This function returns an object detailing the current **estimated** power usage
@@ -9646,13 +9549,13 @@ declare class OneWire {
    * @param {boolean} power - Whether to leave power on after write (default is false)
    * @url http://www.espruino.com/Reference#l_OneWire_write
    */
-  write(data: any, power: boolean): void;
+  write(data: any, power: ShortBoolean): void;
 
   /**
    * Read a byte
    *
    * @param {any} [count] - [optional] The amount of bytes to read
-   * @returns {any} The byte that was read, or a Uint8Array if count was specified and >=0
+   * @returns {any} The byte that was read, or a `Uint8Array` if count was specified and >=0
    * @url http://www.espruino.com/Reference#l_OneWire_read
    */
   read(count?: any): any;
@@ -10140,6 +10043,8 @@ interface Array<T> {
   /**
    * Return an array which is made from the following: ```A.map(function) =
    * [function(A[0]), function(A[1]), ...]```
+   * **Note:** Do not modify the array you're iterating over from inside the callback (`a.map(()=>a.push(0))`).
+   * It will cause non-spec-compliant behaviour.
    *
    * @param {any} function - Function used to map one item to another
    * @param {any} [thisArg] - [optional] If specified, the function is called with 'this' set to thisArg
@@ -10150,6 +10055,8 @@ interface Array<T> {
 
   /**
    * Executes a provided function once per array element.
+   * **Note:** Do not modify the array you're iterating over from inside the callback (`a.forEach(()=>a.push(0))`).
+   * It will cause non-spec-compliant behaviour.
    *
    * @param {any} function - Function to be executed
    * @param {any} [thisArg] - [optional] If specified, the function is called with 'this' set to thisArg
@@ -10160,6 +10067,8 @@ interface Array<T> {
   /**
    * Return an array which contains only those elements for which the callback
    * function returns 'true'
+   * **Note:** Do not modify the array you're iterating over from inside the callback (`a.filter(()=>a.push(0))`).
+   * It will cause non-spec-compliant behaviour.
    *
    * @param {any} function - Function to be executed
    * @param {any} [thisArg] - [optional] If specified, the function is called with 'this' set to thisArg
@@ -10176,6 +10085,8 @@ interface Array<T> {
    * ["Hello","There","World"].find(a=>a[0]=="T")
    * // returns "There"
    * ```
+   * **Note:** Do not modify the array you're iterating over from inside the callback (`a.find(()=>a.push(0))`).
+   * It will cause non-spec-compliant behaviour.
    *
    * @param {any} function - Function to be executed
    * @returns {any} The array element where `function` returns `true`, or `undefined`
@@ -10191,6 +10102,8 @@ interface Array<T> {
    * ["Hello","There","World"].findIndex(a=>a[0]=="T")
    * // returns 1
    * ```
+   * **Note:** Do not modify the array you're iterating over from inside the callback (`a.findIndex(()=>a.push(0))`).
+   * It will cause non-spec-compliant behaviour.
    *
    * @param {any} function - Function to be executed
    * @returns {any} The array element's index where `function` returns `true`, or `-1`
@@ -10201,6 +10114,8 @@ interface Array<T> {
   /**
    * Return 'true' if the callback returns 'true' for any of the elements in the
    * array
+   * **Note:** Do not modify the array you're iterating over from inside the callback (`a.some(()=>a.push(0))`).
+   * It will cause non-spec-compliant behaviour.
    *
    * @param {any} function - Function to be executed
    * @param {any} [thisArg] - [optional] If specified, the function is called with 'this' set to thisArg
@@ -10211,6 +10126,8 @@ interface Array<T> {
 
   /**
    * Return 'true' if the callback returns 'true' for every element in the array
+   * **Note:** Do not modify the array you're iterating over from inside the callback (`a.every(()=>a.push(0))`).
+   * It will cause non-spec-compliant behaviour.
    *
    * @param {any} function - Function to be executed
    * @param {any} [thisArg] - [optional] If specified, the function is called with 'this' set to thisArg
@@ -10223,13 +10140,15 @@ interface Array<T> {
    * Execute `previousValue=initialValue` and then `previousValue =
    * callback(previousValue, currentValue, index, array)` for each element in the
    * array, and finally return previousValue.
+   * **Note:** Do not modify the array you're iterating over from inside the callback (`a.reduce(()=>a.push(0))`).
+   * It will cause non-spec-compliant behaviour.
    *
    * @param {any} callback - Function used to reduce the array
    * @param {any} initialValue - if specified, the initial value to pass to the function
    * @returns {any} The value returned by the last function called
    * @url http://www.espruino.com/Reference#l_Array_reduce
    */
-  reduce(callback: (previousValue: T, currentValue: T, currentIndex: number, array: T[]) => T, initialValue?: T): T;
+  reduce<O>(callback: (previousValue: O, currentValue: T, currentIndex: number, array: T[]) => O, initialValue?: O): O;
 
   /**
    * Both remove and add items to an array
@@ -10274,6 +10193,8 @@ interface Array<T> {
 
   /**
    * Do an in-place quicksort of the array
+   * **Note:** Do not modify the array you're iterating over from inside the callback (`a.sort(()=>a.push(0))`).
+   * It will cause non-spec-compliant behaviour.
    *
    * @param {any} var - A function to use to compare array elements (or undefined)
    * @returns {any} This array object
@@ -10339,8 +10260,6 @@ interface JSONConstructor {
 
   /**
    * Parse the given JSON string into a JavaScript object
-   * NOTE: This implementation uses eval() internally, and as such it is unsafe as it
-   * can allow arbitrary JS commands to be executed.
    *
    * @param {any} string - A JSON string
    * @returns {any} The JavaScript object created by parsing the data string
@@ -10529,19 +10448,19 @@ declare class I2C {
   writeTo(address: any, ...data: any[]): void;
 
   /**
-   * Request bytes from the given slave device, and return them as a Uint8Array
+   * Request bytes from the given slave device, and return them as a `Uint8Array`
    * (packed array of bytes). This is like using Arduino Wire's requestFrom,
    * available and read functions. Sends a STOP unless `{address:X, stop:false}` is used.
    *
    * @param {any} address - The 7 bit address of the device to request bytes from, or an object of the form `{address:12, stop:false}` to send this data without a STOP signal.
    * @param {number} quantity - The number of bytes to request
-   * @returns {any} The data that was returned - as a Uint8Array
+   * @returns {any} The data that was returned - as a `Uint8Array`
    * @url http://www.espruino.com/Reference#l_I2C_readFrom
    */
   readFrom(address: any, quantity: number): Uint8Array;
 
   /**
-   * Request bytes from a register on the given I2C slave device, and return them as a Uint8Array
+   * Request bytes from a register on the given I2C slave device, and return them as a `Uint8Array`
    * (packed array of bytes).
    * This is the same as calling `I2C.writeTo` and `I2C.readFrom`:
    * ```
@@ -10554,7 +10473,7 @@ declare class I2C {
    * @param {number} address - The 7 bit address of the device to request bytes from
    * @param {number} reg - The register on the device to read bytes from
    * @param {number} quantity - The number of bytes to request
-   * @returns {any} The data that was returned - as a Uint8Array
+   * @returns {any} The data that was returned - as a `Uint8Array`
    * @url http://www.espruino.com/Reference#l_I2C_readReg
    */
   readReg(address: number, reg: number, quantity: number): Uint8Array;
@@ -10922,7 +10841,7 @@ declare class Serial {
    * @param {boolean} force - Whether to force the console to this port
    * @url http://www.espruino.com/Reference#l_Serial_setConsole
    */
-  setConsole(force: boolean): void;
+  setConsole(force: ShortBoolean): void;
 
   /**
    * Setup this Serial port with the given baud rate and options.
@@ -10999,7 +10918,7 @@ declare class Serial {
   /**
    * Print a line to the serial port with a newline (`\r\n`) at the end of it.
    *  **Note:** This function converts data to a string first, e.g.
-   *  `Serial.print([1,2,3])` is equivalent to `Serial.print("1,2,3"). If you'd like
+   *  `Serial.print([1,2,3])` is equivalent to `Serial.print("1,2,3")`. If you'd like
    *  to write raw bytes, use `Serial.write`.
    *
    * @param {any} string - A String to print
@@ -11069,6 +10988,16 @@ declare class Serial {
    * @url http://www.espruino.com/Reference#l_Serial_flush
    */
   flush(): void;
+
+  /**
+   * (Added 2v25) Is the given Serial device connected?
+   * * USB/Bluetooth/Telnet/etc: Is this connected?
+   * * Serial1/etc: Has the device been initialised?
+   * * LoopbackA/LoopbackB/Terminal: always return true
+   * @returns {boolean} `true` if connected/initialised, false otherwise
+   * @url http://www.espruino.com/Reference#l_Serial_isConnected
+   */
+  isConnected(): boolean;
 }
 
 /**
@@ -11595,7 +11524,7 @@ declare class Pin {
    * @param {boolean} value - Whether to set output high (true/1) or low (false/0)
    * @url http://www.espruino.com/Reference#l_Pin_write
    */
-  write(value: boolean): void;
+  write(value: ShortBoolean): void;
 
   /**
    * Sets the output state of the pin to the parameter given at the specified time.
@@ -11603,10 +11532,10 @@ declare class Pin {
    *  you need to use `pin.write(0)` or `pinMode(pin, 'output')` first.
    *
    * @param {boolean} value - Whether to set output high (true/1) or low (false/0)
-   * @param {number} time - Time at which to write
+   * @param {number} time - Time at which to write (in seconds)
    * @url http://www.espruino.com/Reference#l_Pin_writeAtTime
    */
-  writeAtTime(value: boolean, time: number): void;
+  writeAtTime(value: ShortBoolean, time: number): void;
 
   /**
    * Return the current mode of the given pin. See `pinMode` for more information.
@@ -11646,11 +11575,11 @@ declare class Pin {
    * @param {any} time - A time in milliseconds, or an array of times (in which case a square wave will be output starting with a pulse of 'value')
    * @url http://www.espruino.com/Reference#l_Pin_pulse
    */
-  pulse(value: boolean, time: any): void;
+  pulse(value: ShortBoolean, time: any): void;
 
   /**
    * (Added in 2v20) Get the analogue value of the given pin. See `analogRead` for more information.
-   * @returns {number} The analog Value of the Pin between 0 and 1
+   * @returns {number} The analog value of the `Pin` between 0(GND) and 1(VCC)
    * @url http://www.espruino.com/Reference#l_Pin_analog
    */
   analog(): number;
@@ -11676,12 +11605,14 @@ declare class Pin {
    * Get information about this pin and its capabilities. Of the form:
    * ```
    * {
-   *   "port"      : "A", // the Pin's port on the chip
-   *   "num"       : 12, // the Pin's number
-   *   "in_addr"   : 0x..., // (if available) the address of the pin's input address in bit-banded memory (can be used with peek)
-   *   "out_addr"  : 0x..., // (if available) the address of the pin's output address in bit-banded memory (can be used with poke)
-   *   "analog"    : { ADCs : [1], channel : 12 }, // If analog input is available
-   *   "functions" : {
+   *   "port"        : "A",    // the Pin's port on the chip
+   *   "num"         : 12,     // the Pin's number
+   *   "mode"        : (2v25+) // string: the pin's mode (same as Pin.getMode())
+   *   "output"      : (2v25+) // 0/1: the state of the pin's output register
+   *   "in_addr"     : 0x..., // (if available) the address of the pin's input address in bit-banded memory (can be used with peek)
+   *   "out_addr"    : 0x..., // (if available) the address of the pin's output address in bit-banded memory (can be used with poke)
+   *   "analog"      : { ADCs : [1], channel : 12 }, // If analog input is available
+   *   "functions"   : {
    *     "TIM1":{type:"CH1, af:0},
    *     "I2C3":{type:"SCL", af:1}
    *   }
@@ -11792,6 +11723,13 @@ declare function compass(): any;
 declare const FET: Pin;
 
 /**
+ * In memory serial I/O device accessible via SWD debugger.
+ * Uses SEGGER RTT so it can be used with openocd and other SEGGER compatible tools.
+ * @url http://www.espruino.com/Reference#l__global_SWDCON
+ */
+declare const SWDCON: Serial;
+
+/**
  * `Q0` and `Q1` Qwiic connectors can have their power controlled by a 500mA FET (`Q0.fet`) which switches GND.
  * The `sda` and `scl` pins on this port are also analog inputs - use `analogRead(Q0.sda)`/etc
  * To turn this connector on run `Q0.setPower(1)`
@@ -11868,143 +11806,11 @@ declare const LED1: any;
 declare const LED2: any;
 
 /**
- * The pin connected to the 'A' button. Reads as `1` when pressed, `0` when not
- * @returns {Pin}
- * @url http://www.espruino.com/Reference#l__global_BTNA
- */
-declare const BTNA: Pin;
-
-/**
- * The pin connected to the 'B' button. Reads as `1` when pressed, `0` when not
- * @returns {Pin}
- * @url http://www.espruino.com/Reference#l__global_BTNB
- */
-declare const BTNB: Pin;
-
-/**
- * The pin connected to the up button. Reads as `1` when pressed, `0` when not
- * @returns {Pin}
- * @url http://www.espruino.com/Reference#l__global_BTNU
- */
-declare const BTNU: Pin;
-
-/**
- * The pin connected to the down button. Reads as `1` when pressed, `0` when not
- * @returns {Pin}
- * @url http://www.espruino.com/Reference#l__global_BTND
- */
-declare const BTND: Pin;
-
-/**
- * The pin connected to the left button. Reads as `1` when pressed, `0` when not
- * @returns {Pin}
- * @url http://www.espruino.com/Reference#l__global_BTNL
- */
-declare const BTNL: Pin;
-
-/**
- * The pin connected to the right button. Reads as `1` when pressed, `0` when not
- * @returns {Pin}
- * @url http://www.espruino.com/Reference#l__global_BTNR
- */
-declare const BTNR: Pin;
-
-/**
- * The pin connected to Corner #1
- * @returns {Pin}
- * @url http://www.espruino.com/Reference#l__global_CORNER1
- */
-declare const CORNER1: Pin;
-
-/**
- * The pin connected to Corner #2
- * @returns {Pin}
- * @url http://www.espruino.com/Reference#l__global_CORNER2
- */
-declare const CORNER2: Pin;
-
-/**
- * The pin connected to Corner #3
- * @returns {Pin}
- * @url http://www.espruino.com/Reference#l__global_CORNER3
- */
-declare const CORNER3: Pin;
-
-/**
- * The pin connected to Corner #4
- * @returns {Pin}
- * @url http://www.espruino.com/Reference#l__global_CORNER4
- */
-declare const CORNER4: Pin;
-
-/**
- * The pin connected to Corner #5
- * @returns {Pin}
- * @url http://www.espruino.com/Reference#l__global_CORNER5
- */
-declare const CORNER5: Pin;
-
-/**
- * The pin connected to Corner #6
- * @returns {Pin}
- * @url http://www.espruino.com/Reference#l__global_CORNER6
- */
-declare const CORNER6: Pin;
-
-/**
  * The Bluetooth Serial port - used when data is sent or received over Bluetooth
  * Smart on nRF51/nRF52 chips.
  * @url http://www.espruino.com/Reference#l__global_Bluetooth
  */
 declare const Bluetooth: Serial;
-
-/**
- * @returns {Pin} A Pin
- * @url http://www.espruino.com/Reference#l__global_MOS1
- */
-declare const MOS1: Pin;
-
-/**
- * @returns {Pin} A Pin
- * @url http://www.espruino.com/Reference#l__global_MOS2
- */
-declare const MOS2: Pin;
-
-/**
- * @returns {Pin} A Pin
- * @url http://www.espruino.com/Reference#l__global_MOS3
- */
-declare const MOS3: Pin;
-
-/**
- * @returns {Pin} A Pin
- * @url http://www.espruino.com/Reference#l__global_MOS4
- */
-declare const MOS4: Pin;
-
-/**
- * @returns {Pin} A Pin
- * @url http://www.espruino.com/Reference#l__global_IOEXT0
- */
-declare const IOEXT0: Pin;
-
-/**
- * @returns {Pin} A Pin
- * @url http://www.espruino.com/Reference#l__global_IOEXT1
- */
-declare const IOEXT1: Pin;
-
-/**
- * @returns {Pin} A Pin
- * @url http://www.espruino.com/Reference#l__global_IOEXT2
- */
-declare const IOEXT2: Pin;
-
-/**
- * @returns {Pin} A Pin
- * @url http://www.espruino.com/Reference#l__global_IOEXT3
- */
-declare const IOEXT3: Pin;
 
 /**
  * A simple VT100 terminal emulator.
@@ -12042,7 +11848,7 @@ declare function setSleepIndicator(pin: any): void;
  * @param {boolean} sleep
  * @url http://www.espruino.com/Reference#l__global_setDeepSleep
  */
-declare function setDeepSleep(sleep: boolean): void;
+declare function setDeepSleep(sleep: ShortBoolean): void;
 
 /**
  * Output current interpreter state in a text form such that it can be copied to a
@@ -12120,7 +11926,7 @@ declare function save(): void;
  * @param {boolean} clearFlash - Remove saved code from flash as well
  * @url http://www.espruino.com/Reference#l__global_reset
  */
-declare function reset(clearFlash: boolean): void;
+declare function reset(clearFlash: ShortBoolean): void;
 
 /**
  * Fill the console with the contents of the given function, so you can edit it.
@@ -12140,7 +11946,7 @@ declare function edit(funcName: any): void;
  * @param {boolean} echoOn
  * @url http://www.espruino.com/Reference#l__global_echo
  */
-declare function echo(echoOn: boolean): void;
+declare function echo(echoOn: ShortBoolean): void;
 
 /**
  * Return the current system time in Seconds (as a floating point number)
@@ -12284,7 +12090,7 @@ declare function changeInterval(id: IntervalId, time: number): void;
  * Read 8 bits of memory at the given location - DANGEROUS!
  *
  * @param {number} addr - The address in memory to read
- * @param {number} [count] - [optional] the number of items to read. If >1 a Uint8Array will be returned.
+ * @param {number} [count] - [optional] the number of items to read. If >1 a `Uint8Array` will be returned.
  * @returns {any} The value of memory at the given location
  * @url http://www.espruino.com/Reference#l__global_peek8
  */
@@ -12304,7 +12110,7 @@ declare function poke8(addr: number, value: number | number[]): void;
  * Read 16 bits of memory at the given location - DANGEROUS!
  *
  * @param {number} addr - The address in memory to read
- * @param {number} [count] - [optional] the number of items to read. If >1 a Uint16Array will be returned.
+ * @param {number} [count] - [optional] the number of items to read. If >1 a `Uint16Array` will be returned.
  * @returns {any} The value of memory at the given location
  * @url http://www.espruino.com/Reference#l__global_peek16
  */
@@ -12324,7 +12130,7 @@ declare function poke16(addr: number, value: number | number[]): void;
  * Read 32 bits of memory at the given location - DANGEROUS!
  *
  * @param {number} addr - The address in memory to read
- * @param {number} [count] - [optional] the number of items to read. If >1 a Uint32Array will be returned.
+ * @param {number} [count] - [optional] the number of items to read. If >1 a `Uint32Array` will be returned.
  * @returns {any} The value of memory at the given location
  * @url http://www.espruino.com/Reference#l__global_peek32
  */
@@ -12342,6 +12148,9 @@ declare function poke32(addr: number, value: number | number[]): void;
 
 /**
  * Get the analogue value of the given pin.
+ * * The value is normally greater than or equal to 0, however in some cases nRF52-based boards can produce values
+ * less than 0 when the ADC voltage is slightly less than the chip's internal GND.
+ * * The value returned will always be *less* than 1, even when the ADC reads full range. For example a 12 bit ADC may return 4095 as a full-range value, but this is divided by 4096 to produce `analogRead`'s output value.
  * This is different to Arduino which only returns an integer between 0 and 1023
  * However only pins connected to an ADC will work (see the datasheet)
  * **Note:** if you didn't call `pinMode` beforehand then this function will also
@@ -12353,7 +12162,7 @@ declare function poke32(addr: number, value: number | number[]): void;
  * @param {Pin} pin
  * The pin to use
  * You can find out which pins to use by looking at [your board's reference page](#boards) and searching for pins with the `ADC` markers.
- * @returns {number} The Analog Value of the Pin between 0(GND) and 1(VCC). See below.
+ * @returns {number} The analog value of the `Pin` between 0(GND) and 1(VCC). See below.
  * @url http://www.espruino.com/Reference#l__global_analogRead
  */
 declare function analogRead(pin: Pin): number;
@@ -12541,7 +12350,7 @@ declare function shiftOut(pins: Pin | Pin[], options: { clk?: Pin, clkPol?: bool
  *    // setting irq:true will call that function in the interrupt itself
  *    irq : false(default)
  *    // Advanced: If specified, the given pin will be read whenever the watch is called
- *    // and the state will be included as a 'data' field in the callback
+ *    // and the state will be included as a 'data' field in the callback (`debounce:0` is required)
  *    data : pin
  *    // Advanced: On Nordic devices, a watch may be 'high' or 'low' accuracy. By default low
  *    // accuracy is used (which is better for power consumption), but this means that
@@ -12558,7 +12367,7 @@ declare function shiftOut(pins: Pin | Pin[], options: { clk?: Pin, clkPol?: bool
  *    When using `edge:'rising'` or `edge:'falling'`, this is not the same as when
  *    the function was last called.
  *  * `data` is included if `data:pin` was specified in the options, and can be
- *    used for reading in clocked data
+ *    used for reading in clocked data. It will only work if `debounce:0` is used
  * For instance, if you want to measure the length of a positive pulse you could
  * use `setWatch(function(e) { console.log(e.time-e.lastTime); }, BTN, {
  * repeat:true, edge:'falling' });`. This will only be called on the falling edge
@@ -12603,6 +12412,7 @@ declare const global: {
   acceleration: typeof acceleration;
   compass: typeof compass;
   FET: typeof FET;
+  SWDCON: typeof SWDCON;
   Q0: typeof Q0;
   Q1: typeof Q1;
   Q2: typeof Q2;
@@ -12611,27 +12421,7 @@ declare const global: {
   LED: typeof LED;
   LED1: typeof LED1;
   LED2: typeof LED2;
-  BTNA: typeof BTNA;
-  BTNB: typeof BTNB;
-  BTNU: typeof BTNU;
-  BTND: typeof BTND;
-  BTNL: typeof BTNL;
-  BTNR: typeof BTNR;
-  CORNER1: typeof CORNER1;
-  CORNER2: typeof CORNER2;
-  CORNER3: typeof CORNER3;
-  CORNER4: typeof CORNER4;
-  CORNER5: typeof CORNER5;
-  CORNER6: typeof CORNER6;
   Bluetooth: typeof Bluetooth;
-  MOS1: typeof MOS1;
-  MOS2: typeof MOS2;
-  MOS3: typeof MOS3;
-  MOS4: typeof MOS4;
-  IOEXT0: typeof IOEXT0;
-  IOEXT1: typeof IOEXT1;
-  IOEXT2: typeof IOEXT2;
-  IOEXT3: typeof IOEXT3;
   Terminal: typeof Terminal;
   setBusyIndicator: typeof setBusyIndicator;
   setSleepIndicator: typeof setSleepIndicator;
@@ -13032,7 +12822,7 @@ declare module "ESP8266" {
    * @param {boolean} enable - Enable or disable the debug logging.
    * @url http://www.espruino.com/Reference#l_ESP8266_logDebug
    */
-  function logDebug(enable: boolean): void;
+  function logDebug(enable: ShortBoolean): void;
 
   /**
    * Set the debug logging mode. It can be disabled (which frees ~1.2KB of heap),
@@ -13081,10 +12871,9 @@ declare module "ESP8266" {
    * * `cpuFrequency` - CPU operating frequency in Mhz.
    * * `freeHeap` - Amount of free heap in bytes.
    * * `maxCon` - Maximum number of concurrent connections.
-   * * `flashMap` - Configured flash size&map: '512KB:256/256' .. '4MB:512/512'
+   * * `flashMap` - Configured flash size&map: '512KB:256/256' .. `'4MB:512/512'`
    * * `flashKB` - Configured flash size in KB as integer
-   * * `flashChip` - Type of flash chip as string with manufacturer & chip, ex: '0xEF
-   *   0x4016`
+   * * `flashChip` - Type of flash chip as string with manufacturer & chip, ex: `'0xEF 0x4016'`
    * @returns {any} The state of the ESP8266
    * @url http://www.espruino.com/Reference#l_ESP8266_getState
    */
@@ -13218,7 +13007,7 @@ declare module "crypto" {
    * @param {any} passphrase - Passphrase
    * @param {any} salt - Salt for turning passphrase into a key
    * @param {any} options - Object of Options, `{ keySize: 8 (in 32 bit words), iterations: 10, hasher: 'SHA1'/'SHA224'/'SHA256'/'SHA384'/'SHA512' }`
-   * @returns {any} Returns an ArrayBuffer
+   * @returns {any} Returns an `ArrayBuffer`
    * @url http://www.espruino.com/Reference#l_crypto_PBKDF2
    */
   function PBKDF2(passphrase: any, salt: any, options: any): ArrayBuffer;
@@ -13361,7 +13150,7 @@ declare module "tls" {
    * * Just specify the filename (<=100 characters) and it will be loaded and parsed
    *   if you have an SD card connected. For instance `options.key = "key.pem";`
    * * Specify a function, which will be called to retrieve the data. For instance
-   *   `options.key = function() { eeprom.load_my_info(); };
+   *   `options.key = function() { eeprom.load_my_info(); };`
    * For more information about generating and using certificates, see:
    * https://engineering.circle.com/https-authorized-certs-with-node-js/
    * (You'll need to use 2048 bit certificates as opposed to 4096 bit shown above)
@@ -13966,8 +13755,7 @@ declare module "http" {
    *   });
    * });
    * ```
-   * See `http.request()` and [the Internet page](/Internet) and ` for more usage
-   * examples.
+   * See `http.request()` and [the Internet page](/Internet) for more usage examples.
    *
    * @param {any} options - A simple URL, or an object containing host,port,path,method fields
    * @param {any} callback - A function(res) that will be called when a connection is made. You can then call `res.on('data', function(data) { ... })` and `res.on('close', function() { ... })` to deal with the response.
@@ -14160,6 +13948,20 @@ declare module "fs" {
   function statSync(path: any): any;
 
   /**
+   * Get the number of free sectors on the volume. This returns an object with the following
+   * fields:
+   * freeSectors: the number of free sectors
+   * totalSectors: the total number of sectors on the volume
+   * sectorSize: the number of bytes per sector
+   * clusterSize: the number of sectors per cluster
+   *
+   * @param {any} path - The path specifying the logical drive
+   * @returns {any} An object describing the drive, or undefined on failure
+   * @url http://www.espruino.com/Reference#l_fs_getFree
+   */
+  function getFree(path: any): any;
+
+  /**
    * Create the directory
    * NOTE: Espruino does not yet support Async file IO, so this function behaves like
    * the 'Sync' version.
@@ -14178,6 +13980,13 @@ declare module "fs" {
    * @url http://www.espruino.com/Reference#l_fs_mkdirSync
    */
   function mkdirSync(path: any): boolean;
+
+  /**
+   * Reformat the connected media to a FAT filesystem
+   * @returns {boolean} True on success, or false on failure
+   * @url http://www.espruino.com/Reference#l_fs_mkfs
+   */
+  function mkfs(): boolean;
 
   /**
    * Pipe this file to a destination stream (object which has a `.write(data)` method).
@@ -14279,14 +14088,14 @@ declare module "tensorflow" {
  */
 declare module "heatshrink" {
   /**
-   * Compress the data supplied as input, and return heatshrink encoded data as an ArrayBuffer.
+   * Compress the data supplied as input, and return heatshrink encoded data as an `ArrayBuffer`.
    * No type information is stored, and the `data` argument is treated as an array of bytes
    * (whether it is a `String`/`Uint8Array` or even `Uint16Array`), so the result of
-   * decompressing any compressed data will always be an ArrayBuffer.
+   * decompressing any compressed data will always be an `ArrayBuffer`.
    * If you'd like a way to perform compression/decompression on desktop, check out https://github.com/espruino/EspruinoWebTools#heatshrinkjs
    *
    * @param {any} data - The data to compress
-   * @returns {any} Returns the result as an ArrayBuffer
+   * @returns {any} Returns the result as an `ArrayBuffer`
    * @url http://www.espruino.com/Reference#l_heatshrink_compress
    */
   function compress(data: any): ArrayBuffer;
@@ -14590,7 +14399,7 @@ declare module "Storage" {
    * @param {boolean} [showMessage] - [optional] If true, an overlay message will be displayed on the screen while compaction is happening. Default is false.
    * @url http://www.espruino.com/Reference#l_Storage_compact
    */
-  function compact(showMessage?: boolean): void;
+  function compact(showMessage?: ShortBoolean): void;
 
   /**
    * This writes information about all blocks in flash memory to the console - and is
@@ -14609,7 +14418,7 @@ declare module "Storage" {
    * @returns {number} The amount of free bytes
    * @url http://www.espruino.com/Reference#l_Storage_getFree
    */
-  function getFree(checkInternalFlash: boolean): number;
+  function getFree(checkInternalFlash: ShortBoolean): number;
 
   /**
    * Returns:
@@ -14629,7 +14438,7 @@ declare module "Storage" {
    * @returns {any} An object containing info about the current Storage system
    * @url http://www.espruino.com/Reference#l_Storage_getStats
    */
-  function getStats(checkInternalFlash: boolean): any;
+  function getStats(checkInternalFlash: ShortBoolean): any;
 
   /**
    * Writes a lookup table for files into Bangle.js's storage. This allows any file

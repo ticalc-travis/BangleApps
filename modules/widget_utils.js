@@ -30,7 +30,7 @@ exports.show = function() {
 /// Remove anything not needed if the overlay was removed
 exports.cleanupOverlay = function() {
   exports.offset = -24;
-  Bangle.setLCDOverlay(undefined, {id: "widget_utils"});
+  Bangle.setLCDOverlay && Bangle.setLCDOverlay(undefined, {id: "widget_utils"});
   delete exports.autohide;
   delete Bangle.appRect;
   if (exports.animInterval) {
@@ -90,9 +90,9 @@ exports.swipeOn = function(autohide) {
 
   function queueDraw() {
     const o = exports.offset;
-    if (o>-24) {
-      Bangle.appRect.y = o+24;
-      Bangle.appRect.h = 1 + Bangle.appRect.y2 - Bangle.appRect.y;
+    Bangle.appRect.y = o+24;
+    Bangle.appRect.h = 1 + Bangle.appRect.y2 - Bangle.appRect.y;
+    if (Bangle.setLCDOverlay) {
       if (o>-24) {
         Bangle.setLCDOverlay(og, 0, o, {
           id:"widget_utils",

@@ -106,3 +106,25 @@
 0.77: Messages can now use international fonts if they are installed
 0.78: Fix: When user taps on a new message, clear the unread timeout
 0.79: Fix: Reset the unread timeout each time a new message is shown. When the message is read from user input, do not set an unread timeout.
+0.80: Add ability to reply to messages if a reply library is installed and the message can be replied to
+0.81: Fix issue stopping Music message for being marked as read
+      Make sure play button image is transparent
+      Add top-right menu to music playback to allow message to be deleted
+0.82: Stop buzzing when a message is removed (e.g. call answered)
+0.83: Add option to not open the first unread message
+0.84: Fix: Assign show message entry to the settings menu and not the message itself.
+0.85: Use new Rebble fonts if available
+      Remove workaround for 2v10 (>3 years ago) - assume everyone is on never firmware now
+0.86: Default to showing message scroller (with title, bigger icon)
+0.87: Make choosing of font size more repeatable
+0.88: Adjust padding calculation so messages are spaced out properly even when using international fonts
+0.89: Fix bugs related to empty titles and bodies
+0.90: New settings for when to auto show new message (never, on clocks -
+      default, if locked, always)
+0.91: Ensure music messages are actually saved in the messages list so the currently playing track persists
+      Use E.on("kill" event to ensure we always save messages before changing app
+      Simplify message handling now messages lib automatically applies Bangle.messages
+0.92: Add support for displaying the time since the message was received using the 'date' parameter when pushing a message.
+0.93: Add support for notification actions.
+0.94: Fix crash with certain navigation messages (fix #4364)
+0.95: Fix for crash when messages contain malformed images (fix #4367)

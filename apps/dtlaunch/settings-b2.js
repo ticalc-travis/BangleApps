@@ -1,6 +1,6 @@
 (function(back) {
   var FILE = "dtlaunch.json";
-  
+
   var settings = Object.assign({
     showClocks: true,
     showLaunchers: true,
@@ -8,6 +8,7 @@
     swipeExit: false,
     timeOut: "Off",
     interactionBuzz: false,
+    rememberPage: false,
   }, require('Storage').readJSON(FILE, true) || {});
 
   function writeSettings() {
@@ -24,6 +25,7 @@
       onchange: v => {
         settings.showClocks = v;
         writeSettings();
+        require("launch_utils").clearCache();
       }
     },
     /*LANG*/'Show launchers': {
@@ -31,6 +33,7 @@
       onchange: v => {
         settings.showLaunchers = v;
         writeSettings();
+        require("launch_utils").clearCache();
       }
     },
     /*LANG*/'Direct launch': {
@@ -64,5 +67,12 @@
         writeSettings();
       }
     },
+    /*LANG*/'Remember Page': {
+      value: settings.rememberPage,
+      onchange: v => {
+        settings.rememberPage = v;
+        writeSettings();
+      }
+    },
   });
-});
+})
