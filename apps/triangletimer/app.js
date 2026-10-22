@@ -288,60 +288,119 @@ class TimerViewMenu {
         title: this.tri_timer.display_name(),
         back: this.back.bind(this)
       },
-      'Reset': () => { E.showMenu(reset_menu); },
+      'Reset': () => { switch_UI(new ResetTimerMenu(this.tri_timer)); },
       'Timers': () => {
         switch_UI(new TimerMenu(tt.TIMERS, this.tri_timer));
       },
-      'Edit': this.edit_menu.bind(this),
+      'Edit': () => { switch_UI(new EditTimerMenu(this.tri_timer)); },
       'Add': () => {
         tt.set_timers_dirty();
         const new_timer = tt.add_tri_timer(tt.TIMERS, this.tri_timer);
-        const timer_view_menu = new TimerViewMenu(new_timer);
-        timer_view_menu.edit_menu();
+        switch_UI(new EditTimerMenu(new_timer));
       },
-      'Delete': () => { E.showMenu(delete_menu); },
+      'Delete': () => { switch_UI(new DeleteTimerMenu(this.tri_timer)); },
     };
     if (tt.TIMERS.length <= 1) {
       // Prevent user deleting last timer
       delete top_menu.Delete;
     }
+    E.showMenu(top_menu);
+  }
+}
 
-    const reset_menu = {
+class ResetTimerMenu {
+  constructor(tri_timer, back) {
+    this.tri_timer = tri_timer;
+    this.back = back || this._back;
+  }
+
+  _back(ok) {
+    if (ok) {
+      switch_UI(new TimerView(this.tri_timer));
+    } else {
+      switch_UI(new TimerViewMenu(this.tri_timer));
+    }
+  }
+
+  start() {
+    E.showMenu({
       '': {
         title: 'Confirm reset',
-        back: () => { E.showMenu(top_menu); }
+        back: () => { this.back(false); }
       },
       'Reset': () => {
         this.tri_timer.reset();
         tt.set_timers_dirty();
-        this.back();
+        this.back(true);
       },
-      'Cancel': () => { E.showMenu(top_menu); },
-    };
+      'Cancel': () => { this.back(false); },
+    });
+  }
 
-    const delete_menu = {
+  stop() {
+    E.showMenu();
+  }
+}
+
+class DeleteTimerMenu {
+  constructor(tri_timer, back) {
+    this.tri_timer = tri_timer;
+    this.back = back || this._back;
+  }
+
+  _back(ok, tri_timer) {
+    if (ok) {
+      switch_UI(new TimerView(tri_timer));
+    } else {
+      switch_UI(new TimerViewMenu(this.tri_timer));
+    }
+  }
+
+  start() {
+    E.showMenu({
       '': {
         title: 'Confirm delete',
-        back: () => { E.showMenu(top_menu); }
+        back: () => { this.back(false); }
       },
       'Delete': () => {
         tt.set_timers_dirty();
-        switch_UI(new TimerView(tt.delete_tri_timer(tt.TIMERS, this.tri_timer)));
+        this.back(true, tt.delete_tri_timer(tt.TIMERS, this.tri_timer));
       },
-      'Cancel': () => { E.showMenu(top_menu); },
-    };
-
-    E.showMenu(top_menu);
+      'Cancel': () => { this.back(false); },
+    });
   }
 
-  edit_menu() {
+  stop() {
+    E.showMenu();
+  }
+}
+
+class EditTimerMenu {
+  constructor(tri_timer, back) {
+    this.tri_timer = tri_timer;
+    this.back = back || this._back;
+  }
+
+  _back() {
+    switch_UI(new TimerViewMenu(this.tri_timer));
+  }
+
+  start() {
+    this.show_menu();
+  }
+
+  stop() {
+    E.showMenu();
+  }
+
+  show_menu() {
     let keyboard = null;
     try { keyboard = require('textinput'); } catch (e) {}
 
-    const edit_menu = {
+    const menu = {
       '': {
         title: 'Edit: ' + this.tri_timer.display_name(),
-        back: () => { this.top_menu(); },
+        back: this.back.bind(this),
       },
       'Name': {
         value: this.tri_timer.name,
@@ -350,7 +409,7 @@ class TimerViewMenu {
             keyboard.input({text:this.tri_timer.name}).then(text => {
               this.tri_timer.name = text;
               tt.set_timers_dirty();
-              setTimeout(() => { this.edit_menu(); }, 0);
+              setTimeout(() => { this.show_menu(); }, 0);
             });
           }, 100);
         }
@@ -363,8 +422,8 @@ class TimerViewMenu {
           tt.set_timers_dirty();
         }
       },
-      'Start (Tri)': this.edit_start_tri_menu.bind(this),
-      'Start (HMS)': this.edit_start_hms_menu.bind(this),
+      'Start (Tri)': () => { switch_UI(new EditStartTriMenu(this.tri_timer)); },
+      'Start (HMS)': () => { switch_UI(new EditStartHMSMenu(this.tri_timer)); },
       'Increment': {
         value: this.tri_timer.increment,
         min: 1,
@@ -376,24 +435,35 @@ class TimerViewMenu {
           tt.set_timers_dirty();
         },
       },
-      'Events': this.edit_events_menu.bind(this),
+      'Events': () => { switch_UI(new EditTimerEventsMenu(this.tri_timer)); },
     };
 
     if (!keyboard) {
-      delete edit_menu.Name;
+      delete menu.Name;
     }
 
-    E.showMenu(edit_menu);
+    E.showMenu(menu);
+  }
+}
+
+class EditStartTriMenu {
+  constructor(tri_timer, back) {
+    this.tri_timer = tri_timer;
+    this.back = back || this._back;
   }
 
-  edit_start_tri_menu() {
+  _back() {
+    switch_UI(new EditTimerMenu(this.tri_timer));
+  }
+
+  start() {
     let origin_tri = tt.as_triangle(
       this.tri_timer.origin, this.tri_timer.increment);
 
-    const edit_start_tri_menu = {
+    const menu = {
       '': {
         title: 'Start (Tri)',
-        back: this.edit_menu.bind(this),
+        back: this.back.bind(this),
       },
       'Outer': {
         value: origin_tri[0],
@@ -405,10 +475,10 @@ class TimerViewMenu {
         noList: true,
         onchange: v => {
           origin_tri[0] = v;
-          edit_start_tri_menu.Inner.max = origin_tri[0];
+          menu.Inner.max = origin_tri[0];
           origin_tri[1] = (this.tri_timer.rate >= 0) ?
             1 : origin_tri[0];
-          edit_start_tri_menu.Inner.value = origin_tri[1];
+          menu.Inner.value = origin_tri[1];
           this.tri_timer.origin = tt.as_linear(
             origin_tri, this.tri_timer.increment
           );
@@ -432,10 +502,25 @@ class TimerViewMenu {
       },
     };
 
-    E.showMenu(edit_start_tri_menu);
+    E.showMenu(menu);
   }
 
-  edit_start_hms_menu() {
+  stop() {
+    E.showMenu();
+  }
+}
+
+class EditStartHMSMenu {
+  constructor(tri_timer, back) {
+    this.tri_timer = tri_timer;
+    this.back = back || this._back;
+  }
+
+  _back() {
+    switch_UI(new EditTimerMenu(this.tri_timer));
+  }
+
+  start() {
     let origin_hms = {
       h: Math.floor(this.tri_timer.origin / 3600),
       m: Math.floor(this.tri_timer.origin / 60) % 60,
@@ -448,10 +533,10 @@ class TimerViewMenu {
         + origin_hms.s;
     };
 
-    const edit_start_hms_menu = {
+    const menu = {
       '': {
         title: 'Start (HMS)',
-        back: this.edit_menu.bind(this),
+        back: this.back.bind(this),
       },
       'Hours': {
         value: origin_hms.h,
@@ -488,14 +573,29 @@ class TimerViewMenu {
       },
     };
 
-    E.showMenu(edit_start_hms_menu);
+    E.showMenu(menu);
   }
 
-  edit_events_menu() {
-    const events_menu = {
+  stop() {
+    E.showMenu();
+  }
+}
+
+class EditTimerEventsMenu {
+  constructor(tri_timer, back) {
+    this.tri_timer = tri_timer;
+    this.back = back || this._back;
+  }
+
+  _back() {
+    switch_UI(new EditTimerMenu(this.tri_timer));
+  }
+
+  start() {
+    const menu = {
       '': {
         title: 'Events',
-        back: () => { this.edit_menu(); }
+        back: this.back.bind(this)
       },
       'Outer interval': {
         value: this.tri_timer.outer_event_increment,
@@ -552,7 +652,11 @@ class TimerViewMenu {
       },
     };
 
-    E.showMenu(events_menu);
+    E.showMenu(menu);
+  }
+
+  stop() {
+    E.showMenu();
   }
 }
 
