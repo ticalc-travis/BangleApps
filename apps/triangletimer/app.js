@@ -26,25 +26,28 @@ class TimerView {
     this.tri_timer.on('auto-pause', tt.set_timers_dirty);
     this.listeners.status = render_status;
 
-    // Touch handler
-    function touchHandler(button, xy) {
-      for (var id of ['row1', 'row2', 'row3']) {
-        const elem = this.layout[id];
-        if (!xy.type &&
-            elem.x <= xy.x && xy.x < elem.x + elem.w &&
-            elem.y <= xy.y && xy.y < elem.y + elem.h) {
+    // Tap handler
+    function tapHandler(button, xy) {
+      // Check if the tap was in the area of the timer display
+      if (xy.y < this.layout.buttons.y) {
+        // Left half of display area: switch display modes; right half of display area: reset timer
+        if (xy.x < this.layout.row1.x + this.layout.row1.w / 2) {
           Bangle.buzz(50, 0.5);
           tt.SETTINGS.view_mode = (tt.SETTINGS.view_mode + 1) % 4;
           tt.schedule_save_settings();
           setTimeout(this.render.bind(this), 0);
-          break;
+        } else {
+          switch_UI(new ResetTimerMenu(
+            this.tri_timer,
+            () => { switch_UI(new TimerView(this.tri_timer)); }
+          ));
         }
       }
     }
-    this.listeners.touch = touchHandler.bind(this);
-    Bangle.on('touch', this.listeners.touch);
+    this.listeners.tap = tapHandler.bind(this);
+    Bangle.on('touch', this.listeners.tap);
 
-    // Switch timers with a horizontal drag
+    // Drag handler
     let distanceX = null;
     function dragHandler(ev) {
       if (ev.b) {
@@ -86,7 +89,7 @@ class TimerView {
       this.to_top_timeout = null;
     }
     this.tri_timer.removeListener('status', this.listeners.status);
-    Bangle.removeListener('touch', this.listeners.touch);
+    Bangle.removeListener('touch', this.listeners.tap);
     Bangle.removeListener('drag', this.listeners.drag);
     clearWatch(this.listeners.button);
     Bangle.setUI();
