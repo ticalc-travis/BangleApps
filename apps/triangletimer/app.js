@@ -4,6 +4,9 @@ const tt = require('triangletimer');
 
 // UI //
 
+const MOVE_TO_TOP_TIMEOUT = 5000;
+const DRAG_THRESHOLD = 50;
+
 class TimerView {
   constructor(tri_timer) {
     this.tri_timer = tri_timer;
@@ -11,13 +14,13 @@ class TimerView {
     this.layout = null;
     this.listeners = {};
     this.timer_timeout = null;
+    this.to_top_timeout = null;
   }
 
   start() {
     this._initLayout();
     this.layout.clear();
     this.render();
-    tt.set_last_viewed_timer(this.tri_timer);
     let render_status = () => { this.render(); };
     this.tri_timer.on('status', render_status);
     this.tri_timer.on('auto-pause', tt.set_timers_dirty);
@@ -41,6 +44,30 @@ class TimerView {
     this.listeners.touch = touchHandler.bind(this);
     Bangle.on('touch', this.listeners.touch);
 
+    // Switch timers with a horizontal drag
+    let distanceX = null;
+    function dragHandler(ev) {
+      if (ev.b) {
+        distanceX = (distanceX === null ? 0 : distanceX) + ev.dx;
+      } else {
+        distanceX = null;
+      }
+      if (distanceX !== null && Math.abs(distanceX) > DRAG_THRESHOLD) {
+        if (tt.TIMERS.length > 1) {
+          Bangle.buzz(50, 0.5);
+          let index = tt.TIMERS.indexOf(this.tri_timer) + Math.sign(distanceX);
+          index = (index + tt.TIMERS.length) % tt.TIMERS.length;
+          switch_UI(new TimerView(tt.TIMERS[index]));
+        }
+        distanceX = null;
+      }
+    }
+    this.listeners.drag = dragHandler.bind(this);
+    Bangle.on('drag', this.listeners.drag);
+
+    this.to_top_timeout = setTimeout(
+      tt.set_last_viewed_timer, MOVE_TO_TOP_TIMEOUT, this.tri_timer);
+
     // Physical button handler
     this.listeners.button = setWatch(
       this.start_stop_timer.bind(this),
@@ -54,8 +81,13 @@ class TimerView {
       clearTimeout(this.timer_timeout);
       this.timer_timeout = null;
     }
+    if (this.to_top_timeout !== null) {
+      clearTimeout(this.to_top_timeout);
+      this.to_top_timeout = null;
+    }
     this.tri_timer.removeListener('status', this.listeners.status);
     Bangle.removeListener('touch', this.listeners.touch);
+    Bangle.removeListener('drag', this.listeners.drag);
     clearWatch(this.listeners.button);
     Bangle.setUI();
   }
