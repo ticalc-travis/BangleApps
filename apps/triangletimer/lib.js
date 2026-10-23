@@ -400,6 +400,7 @@ function schedule_save_settings() {
 
 const SETTINGS = Object.assign({
   'view_mode': 0,
+  'all_silenced': false,
 }, Storage.readJSON(SETTINGS_FILENAME, true) || {});
 
 var TIMERS = load_timers();
@@ -467,6 +468,10 @@ function delete_system_alarms() {
 }
 
 function set_system_alarms() {
+  if (SETTINGS.all_silenced) {
+    console.debug('silence all timers, not setting system alarms');
+    return;
+  }
   for (let idx = 0; idx < TIMERS.length; idx++) {
     let timer = TIMERS[idx];
     timer.check_auto_pause();

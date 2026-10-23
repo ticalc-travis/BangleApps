@@ -302,6 +302,17 @@ class TimerViewMenu {
         switch_UI(new EditTimerMenu(new_timer));
       },
       'Delete': () => { switch_UI(new DeleteTimerMenu(this.tri_timer)); },
+      'Silence All': {
+        value: tt.SETTINGS.all_silenced,
+        format: v => (v ? 'On' : 'Off'),
+        onchange: v => {
+          tt.SETTINGS.all_silenced = v;
+          setTimeout(() => {
+            tt.update_system_alarms();
+          }, 100);
+          tt.schedule_save_settings();
+        }
+      },
     };
     if (tt.TIMERS.length <= 1) {
       // Prevent user deleting last timer
