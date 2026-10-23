@@ -223,10 +223,10 @@ class TriangleTimer extends PrimitiveTimer {
       next_outer = Math.ceil(next_outer / this.increment) * this.increment;
       print('next_outer>> ' + next_outer);
       next_linear = as_linear([next_outer, next_outer], this.increment) - curr_linear;
-
     } else {
       // countdown
-      let next_outer = Math.floor((curr_as_tri[0] - this.increment) / this.outer_event_increment)
+      let next_outer = Math.floor(
+        (curr_as_tri[0] - this.increment) / this.outer_event_increment)
         * this.outer_event_increment;
       print('next_outer>> ' + next_outer);
       // Find the multiple of this.increment that is <= next_outer
