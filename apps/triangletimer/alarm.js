@@ -23,8 +23,6 @@ function showAlarm(alarm) {
       tt.set_last_viewed_timer(tri_timer);
       load('triangletimer.app.js');
     } else if (action === 'ok') {
-      load();
-    } else if (action === 'next') {
       if (isAutoPause) {
         tri_timer.start();
         tt.update_system_alarms();
@@ -35,11 +33,7 @@ function showAlarm(alarm) {
 
   const isAutoPause = tri_timer.outer_action === 'Pause';
   const buttons = { Goto: 'goto', };
-  if (isAutoPause) {
-    buttons['Next'] = 'next';
-  } else {
-    buttons['OK'] = 'ok';
-  }
+  buttons[isAutoPause ? 'Next' : 'OK'] = 'ok';
   E.showPrompt(message, {
     title: 'Triangle timer',
     buttons: buttons,
