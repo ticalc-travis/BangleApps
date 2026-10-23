@@ -24,12 +24,25 @@ function showAlarm(alarm) {
       load('triangletimer.app.js');
     } else if (action === 'ok') {
       load();
+    } else if (action === 'next') {
+      if (isAutoPause) {
+        tri_timer.start();
+        tt.update_system_alarms();
+      }
+      load();
     }
   };
 
+  const isAutoPause = tri_timer.outer_action === 'Pause';
+  const buttons = { Goto: 'goto', };
+  if (isAutoPause) {
+    buttons['Next'] = 'next';
+  } else {
+    buttons['OK'] = 'ok';
+  }
   E.showPrompt(message, {
     title: 'Triangle timer',
-    buttons: { "Goto": 'goto', "OK": 'ok' },
+    buttons: buttons,
     back: () => doAlarmAction('ok'),
   }).then(doAlarmAction);
 
