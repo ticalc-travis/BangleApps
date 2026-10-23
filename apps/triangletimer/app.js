@@ -326,7 +326,7 @@ class ResetTimerMenu {
   }
 
   start() {
-    E.showMenu({
+    const menu = {
       '': {
         title: 'Confirm reset',
         back: () => { this.back(false); }
@@ -337,7 +337,12 @@ class ResetTimerMenu {
         this.back(true);
       },
       'Cancel': () => { this.back(false); },
-    });
+    };
+    if (this.tri_timer.get() > 0) {
+      E.showMenu(menu);
+    } else {
+      menu.Reset();
+    }
   }
 
   stop() {
