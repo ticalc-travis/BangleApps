@@ -300,6 +300,9 @@ function fixed_ceil(value) {
 
 
 function as_triangle(linear_time, increment) {
+  if (linear_time < 0) {
+    return [0, 0];
+  }
   if (increment === undefined) increment = 1;
   linear_time = linear_time / increment;
   const outer = fixed_ceil((Math.sqrt(linear_time * 8 + 1) - 1) / 2);
@@ -468,7 +471,7 @@ function set_system_alarms() {
     let timer = TIMERS[idx];
     timer.check_auto_pause();
     let time_to_next_alarm = timer.time_to_next_alarm();
-    if (time_to_next_alarm !== null) {
+    if (time_to_next_alarm) {
       console.debug('set sched alarm ' + idx + ' (' + time_to_next_alarm/1000 + ')');
       Sched.setAlarm(idx.toString(), {
         appid: 'triangletimer',
