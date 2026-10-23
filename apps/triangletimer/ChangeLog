@@ -1,2 +1,3 @@
 0.01: First revision
 0.02: Fix misbehavior and crashing when multiple alarms are due at once
+0.03: Fix some bugs and port some convenience features from Tev's Timer
