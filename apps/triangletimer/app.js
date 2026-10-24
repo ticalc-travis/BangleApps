@@ -620,7 +620,7 @@ class EditTimerEventsMenu {
         value: this.tri_timer.outer_event_increment,
         min: 0,
         max: 9999,
-        step: 1,
+        step: this.tri_timer.increment,
         wrap: true,
         noList: true,
         onchange: v => {
