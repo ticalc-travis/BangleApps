@@ -24,6 +24,7 @@ function showAlarm(alarm) {
       load('triangletimer.app.js');
     } else if (action === 'ok') {
       if (isAutoPause) {
+        Bangle.showLoadingScreen();
         tri_timer.start();
         tt.update_system_alarms();
       }
