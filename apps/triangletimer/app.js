@@ -637,12 +637,14 @@ class EditTimerEventsMenu {
         },
       },
       'Outer action': {
-        value: tt.ACTIONS.indexOf(this.tri_timer.outer_action),
-        min: 0,
-        max: tt.ACTIONS.length - 1,
-        format: v => tt.ACTIONS[v],
+        // Currently there are only two options, so this streamlines the
+        // menu so that only a single tap will toggle it. If more
+        // options are added, this should be changed to work in a more
+        // conventional way.
+        value: [false, true][tt.ACTIONS.indexOf(this.tri_timer.outer_action)],
+        format: v => (v ? tt.ACTIONS[1] : tt.ACTIONS[0]),
         onchange: v => {
-          this.tri_timer.outer_action = tt.ACTIONS[v];
+          this.tri_timer.outer_action = tt.ACTIONS[v ? 1 : 0];
           tt.set_timers_dirty();
         },
       },
