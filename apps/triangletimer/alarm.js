@@ -30,7 +30,7 @@ function showAlarm(alarm) {
       }
       load();
     }
-  };
+  }
 
   const isAutoPause = tri_timer.outer_action === 'Pause';
   const buttons = { Goto: 'goto', };
