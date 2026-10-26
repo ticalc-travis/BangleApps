@@ -4,6 +4,58 @@ const tt = require('triangletimer');
 
 // UI //
 
+const MOVE_TO_TOP_TIMEOUT = 5000;
+const DRAG_THRESHOLD = 50;
+
+// Indicator arrow size in UI
+const ARROW_BTN_SIZE = 15;
+
+
+function draw_triangle(lay, flip) {
+  // Render right-pointing triangle if `flip`, else left-pointing
+  // triangle
+
+  flip = flip ? lay.w : 0;
+  g.setColor(g.theme.fg)
+    .fillPoly([flip + lay.x, lay.y + lay.h / 2,
+    lay.x + lay.w - flip, lay.y,
+    lay.x + lay.w - flip, lay.y + lay.h]);
+}
+
+function update_status_widget(timer) {
+  // Update the status widget with the current timer status. The
+  // timer is passed as a parameter.
+
+  function widget_draw() {
+    // Draw a right-pointing arrow if the timer is running
+
+    g.reset();
+    if (WIDGETS.triangletimer.width > 1) {
+      draw_triangle({
+        x: WIDGETS.triangletimer.x,
+        // Center the arrow vertically in the 24-pixel-height widget area
+        y: WIDGETS.triangletimer.y + Math.floor((24 - ARROW_BTN_SIZE) / 2),
+        w: ARROW_BTN_SIZE,
+        h: ARROW_BTN_SIZE
+      }, true);
+    }
+  }
+
+  // For some reason, a width of 0 when there's nothing to display
+  // doesn't work as expected, so we use 1 instead.
+  let width = timer.is_running() ? ARROW_BTN_SIZE : 1;
+
+  if (WIDGETS.triangletimer === undefined) {
+    WIDGETS.triangletimer = {
+      area: 'tr',
+      draw: widget_draw,
+    };
+  }
+  WIDGETS.triangletimer.width = width;
+  Bangle.drawWidgets();
+}
+
+
 class TimerView {
   constructor(tri_timer) {
     this.tri_timer = tri_timer;
@@ -11,35 +63,62 @@ class TimerView {
     this.layout = null;
     this.listeners = {};
     this.timer_timeout = null;
+    this.to_top_timeout = null;
   }
 
   start() {
     this._initLayout();
     this.layout.clear();
     this.render();
-    tt.set_last_viewed_timer(this.tri_timer);
     let render_status = () => { this.render(); };
     this.tri_timer.on('status', render_status);
     this.tri_timer.on('auto-pause', tt.set_timers_dirty);
     this.listeners.status = render_status;
 
-    // Touch handler
-    function touchHandler(button, xy) {
-      for (var id of ['row1', 'row2', 'row3']) {
-        const elem = this.layout[id];
-        if (!xy.type &&
-            elem.x <= xy.x && xy.x < elem.x + elem.w &&
-            elem.y <= xy.y && xy.y < elem.y + elem.h) {
+    // Tap handler
+    function tapHandler(button, xy) {
+      // Check if the tap was in the area of the timer display
+      if (xy.y < this.layout.buttons.y) {
+        // Left half of display area: switch display modes; right half of display area: reset timer
+        if (xy.x < this.layout.row1.x + this.layout.row1.w / 2) {
           Bangle.buzz(50, 0.5);
           tt.SETTINGS.view_mode = (tt.SETTINGS.view_mode + 1) % 4;
           tt.schedule_save_settings();
           setTimeout(this.render.bind(this), 0);
-          break;
+        } else {
+          switch_UI(new ResetTimerMenu(
+            this.tri_timer,
+            () => { switch_UI(new TimerView(this.tri_timer)); }
+          ));
         }
       }
     }
-    this.listeners.touch = touchHandler.bind(this);
-    Bangle.on('touch', this.listeners.touch);
+    this.listeners.tap = tapHandler.bind(this);
+    Bangle.on('touch', this.listeners.tap);
+
+    // Drag handler
+    let distanceX = null;
+    function dragHandler(ev) {
+      if (ev.b) {
+        distanceX = (distanceX === null ? 0 : distanceX) + ev.dx;
+      } else {
+        distanceX = null;
+      }
+      if (distanceX !== null && Math.abs(distanceX) > DRAG_THRESHOLD) {
+        if (tt.TIMERS.length > 1) {
+          Bangle.buzz(50, 0.5);
+          let index = tt.TIMERS.indexOf(this.tri_timer) + Math.sign(distanceX);
+          index = (index + tt.TIMERS.length) % tt.TIMERS.length;
+          switch_UI(new TimerView(tt.TIMERS[index]));
+        }
+        distanceX = null;
+      }
+    }
+    this.listeners.drag = dragHandler.bind(this);
+    Bangle.on('drag', this.listeners.drag);
+
+    this.to_top_timeout = setTimeout(
+      tt.set_last_viewed_timer, MOVE_TO_TOP_TIMEOUT, this.tri_timer);
 
     // Physical button handler
     this.listeners.button = setWatch(
@@ -54,8 +133,13 @@ class TimerView {
       clearTimeout(this.timer_timeout);
       this.timer_timeout = null;
     }
+    if (this.to_top_timeout !== null) {
+      clearTimeout(this.to_top_timeout);
+      this.to_top_timeout = null;
+    }
     this.tri_timer.removeListener('status', this.listeners.status);
-    Bangle.removeListener('touch', this.listeners.touch);
+    Bangle.removeListener('touch', this.listeners.tap);
+    Bangle.removeListener('drag', this.listeners.drag);
     clearWatch(this.listeners.button);
     Bangle.setUI();
   }
@@ -184,6 +268,8 @@ class TimerView {
         + ' ' + this.tri_timer.display_name();
       this.layout.clear(this.layout.row3);
       this.layout.render(this.layout.row3);
+
+      update_status_widget(this.tri_timer);
     }
 
     if (this.tri_timer.is_running() && this.tri_timer.get() > 0) {
@@ -256,60 +342,135 @@ class TimerViewMenu {
         title: this.tri_timer.display_name(),
         back: this.back.bind(this)
       },
-      'Reset': () => { E.showMenu(reset_menu); },
+      'Reset': () => { switch_UI(new ResetTimerMenu(this.tri_timer)); },
       'Timers': () => {
         switch_UI(new TimerMenu(tt.TIMERS, this.tri_timer));
       },
-      'Edit': this.edit_menu.bind(this),
+      'Edit': () => { switch_UI(new EditTimerMenu(this.tri_timer)); },
       'Add': () => {
         tt.set_timers_dirty();
         const new_timer = tt.add_tri_timer(tt.TIMERS, this.tri_timer);
-        const timer_view_menu = new TimerViewMenu(new_timer);
-        timer_view_menu.edit_menu();
+        switch_UI(new EditTimerMenu(new_timer));
       },
-      'Delete': () => { E.showMenu(delete_menu); },
+      'Delete': () => { switch_UI(new DeleteTimerMenu(this.tri_timer)); },
+      'Silence All': {
+        value: tt.SETTINGS.all_silenced,
+        format: v => (v ? 'On' : 'Off'),
+        onchange: v => {
+          tt.SETTINGS.all_silenced = v;
+          setTimeout(() => {
+            tt.update_system_alarms();
+          }, 100);
+          tt.schedule_save_settings();
+        }
+      },
     };
     if (tt.TIMERS.length <= 1) {
       // Prevent user deleting last timer
       delete top_menu.Delete;
     }
+    E.showMenu(top_menu);
+  }
+}
 
-    const reset_menu = {
+class ResetTimerMenu {
+  constructor(tri_timer, back) {
+    this.tri_timer = tri_timer;
+    this.back = back || this._back;
+  }
+
+  _back(ok) {
+    if (ok) {
+      switch_UI(new TimerView(this.tri_timer));
+    } else {
+      switch_UI(new TimerViewMenu(this.tri_timer));
+    }
+  }
+
+  start() {
+    const menu = {
       '': {
         title: 'Confirm reset',
-        back: () => { E.showMenu(top_menu); }
+        back: () => { this.back(false); }
       },
       'Reset': () => {
         this.tri_timer.reset();
         tt.set_timers_dirty();
-        this.back();
+        this.back(true);
       },
-      'Cancel': () => { E.showMenu(top_menu); },
+      'Cancel': () => { this.back(false); },
     };
+    if (this.tri_timer.get() > 0) {
+      E.showMenu(menu);
+    } else {
+      menu.Reset();
+    }
+  }
 
-    const delete_menu = {
+  stop() {
+    E.showMenu();
+  }
+}
+
+class DeleteTimerMenu {
+  constructor(tri_timer, back) {
+    this.tri_timer = tri_timer;
+    this.back = back || this._back;
+  }
+
+  _back(ok, tri_timer) {
+    if (ok) {
+      switch_UI(new TimerView(tri_timer));
+    } else {
+      switch_UI(new TimerViewMenu(this.tri_timer));
+    }
+  }
+
+  start() {
+    E.showMenu({
       '': {
         title: 'Confirm delete',
-        back: () => { E.showMenu(top_menu); }
+        back: () => { this.back(false); }
       },
       'Delete': () => {
         tt.set_timers_dirty();
-        switch_UI(new TimerView(tt.delete_tri_timer(tt.TIMERS, this.tri_timer)));
+        this.back(true, tt.delete_tri_timer(tt.TIMERS, this.tri_timer));
       },
-      'Cancel': () => { E.showMenu(top_menu); },
-    };
-
-    E.showMenu(top_menu);
+      'Cancel': () => { this.back(false); },
+    });
   }
 
-  edit_menu() {
+  stop() {
+    E.showMenu();
+  }
+}
+
+class EditTimerMenu {
+  constructor(tri_timer, back) {
+    this.tri_timer = tri_timer;
+    this.back = back || this._back;
+  }
+
+  _back() {
+    switch_UI(new TimerViewMenu(this.tri_timer));
+  }
+
+  start() {
+    this.show_menu();
+  }
+
+  stop() {
+    E.showMenu();
+  }
+
+  show_menu() {
     let keyboard = null;
     try { keyboard = require('textinput'); } catch (e) {}
 
-    const edit_menu = {
+    const menu = {
       '': {
         title: 'Edit: ' + this.tri_timer.display_name(),
-        back: () => { this.top_menu(); },
+        back: this.back.bind(this),
       },
       'Name': {
         value: this.tri_timer.name,
@@ -318,7 +479,7 @@ class TimerViewMenu {
             keyboard.input({text:this.tri_timer.name}).then(text => {
               this.tri_timer.name = text;
               tt.set_timers_dirty();
-              setTimeout(() => { this.edit_menu(); }, 0);
+              setTimeout(() => { this.show_menu(); }, 0);
             });
           }, 100);
         }
@@ -331,8 +492,8 @@ class TimerViewMenu {
           tt.set_timers_dirty();
         }
       },
-      'Start (Tri)': this.edit_start_tri_menu.bind(this),
-      'Start (HMS)': this.edit_start_hms_menu.bind(this),
+      'Start (Tri)': () => { switch_UI(new EditStartTriMenu(this.tri_timer)); },
+      'Start (HMS)': () => { switch_UI(new EditStartHMSMenu(this.tri_timer)); },
       'Increment': {
         value: this.tri_timer.increment,
         min: 1,
@@ -344,24 +505,35 @@ class TimerViewMenu {
           tt.set_timers_dirty();
         },
       },
-      'Events': this.edit_events_menu.bind(this),
+      'Events': () => { switch_UI(new EditTimerEventsMenu(this.tri_timer)); },
     };
 
     if (!keyboard) {
-      delete edit_menu.Name;
+      delete menu.Name;
     }
 
-    E.showMenu(edit_menu);
+    E.showMenu(menu);
+  }
+}
+
+class EditStartTriMenu {
+  constructor(tri_timer, back) {
+    this.tri_timer = tri_timer;
+    this.back = back || this._back;
   }
 
-  edit_start_tri_menu() {
+  _back() {
+    switch_UI(new EditTimerMenu(this.tri_timer));
+  }
+
+  start() {
     let origin_tri = tt.as_triangle(
       this.tri_timer.origin, this.tri_timer.increment);
 
-    const edit_start_tri_menu = {
+    const menu = {
       '': {
         title: 'Start (Tri)',
-        back: this.edit_menu.bind(this),
+        back: this.back.bind(this),
       },
       'Outer': {
         value: origin_tri[0],
@@ -373,10 +545,10 @@ class TimerViewMenu {
         noList: true,
         onchange: v => {
           origin_tri[0] = v;
-          edit_start_tri_menu.Inner.max = origin_tri[0];
+          menu.Inner.max = origin_tri[0];
           origin_tri[1] = (this.tri_timer.rate >= 0) ?
             1 : origin_tri[0];
-          edit_start_tri_menu.Inner.value = origin_tri[1];
+          menu.Inner.value = origin_tri[1];
           this.tri_timer.origin = tt.as_linear(
             origin_tri, this.tri_timer.increment
           );
@@ -400,10 +572,25 @@ class TimerViewMenu {
       },
     };
 
-    E.showMenu(edit_start_tri_menu);
+    E.showMenu(menu);
   }
 
-  edit_start_hms_menu() {
+  stop() {
+    E.showMenu();
+  }
+}
+
+class EditStartHMSMenu {
+  constructor(tri_timer, back) {
+    this.tri_timer = tri_timer;
+    this.back = back || this._back;
+  }
+
+  _back() {
+    switch_UI(new EditTimerMenu(this.tri_timer));
+  }
+
+  start() {
     let origin_hms = {
       h: Math.floor(this.tri_timer.origin / 3600),
       m: Math.floor(this.tri_timer.origin / 60) % 60,
@@ -416,10 +603,10 @@ class TimerViewMenu {
         + origin_hms.s;
     };
 
-    const edit_start_hms_menu = {
+    const menu = {
       '': {
         title: 'Start (HMS)',
-        back: this.edit_menu.bind(this),
+        back: this.back.bind(this),
       },
       'Hours': {
         value: origin_hms.h,
@@ -456,20 +643,35 @@ class TimerViewMenu {
       },
     };
 
-    E.showMenu(edit_start_hms_menu);
+    E.showMenu(menu);
   }
 
-  edit_events_menu() {
-    const events_menu = {
+  stop() {
+    E.showMenu();
+  }
+}
+
+class EditTimerEventsMenu {
+  constructor(tri_timer, back) {
+    this.tri_timer = tri_timer;
+    this.back = back || this._back;
+  }
+
+  _back() {
+    switch_UI(new EditTimerMenu(this.tri_timer));
+  }
+
+  start() {
+    const menu = {
       '': {
         title: 'Events',
-        back: () => { this.edit_menu(); }
+        back: this.back.bind(this)
       },
       'Outer interval': {
         value: this.tri_timer.outer_event_increment,
         min: 0,
         max: 9999,
-        step: 1,
+        step: this.tri_timer.increment,
         wrap: true,
         noList: true,
         onchange: v => {
@@ -486,12 +688,14 @@ class TimerViewMenu {
         },
       },
       'Outer action': {
-        value: tt.ACTIONS.indexOf(this.tri_timer.outer_action),
-        min: 0,
-        max: tt.ACTIONS.length - 1,
-        format: v => tt.ACTIONS[v],
+        // Currently there are only two options, so this streamlines the
+        // menu so that only a single tap will toggle it. If more
+        // options are added, this should be changed to work in a more
+        // conventional way.
+        value: [false, true][tt.ACTIONS.indexOf(this.tri_timer.outer_action)],
+        format: v => (v ? tt.ACTIONS[1] : tt.ACTIONS[0]),
         onchange: v => {
-          this.tri_timer.outer_action = tt.ACTIONS[v];
+          this.tri_timer.outer_action = tt.ACTIONS[v ? 1 : 0];
           tt.set_timers_dirty();
         },
       },
@@ -520,7 +724,11 @@ class TimerViewMenu {
       },
     };
 
-    E.showMenu(events_menu);
+    E.showMenu(menu);
+  }
+
+  stop() {
+    E.showMenu();
   }
 }
 
@@ -577,4 +785,5 @@ var CURRENT_UI = null;
 
 tt.update_system_alarms();
 
+update_status_widget(tt.TIMERS[0]);
 switch_UI(new TimerView(tt.TIMERS[0]));

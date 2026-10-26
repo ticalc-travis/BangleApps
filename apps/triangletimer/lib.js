@@ -223,10 +223,10 @@ class TriangleTimer extends PrimitiveTimer {
       next_outer = Math.ceil(next_outer / this.increment) * this.increment;
       print('next_outer>> ' + next_outer);
       next_linear = as_linear([next_outer, next_outer], this.increment) - curr_linear;
-
     } else {
       // countdown
-      let next_outer = Math.floor((curr_as_tri[0] - this.increment) / this.outer_event_increment)
+      let next_outer = Math.floor(
+        (curr_as_tri[0] - this.increment) / this.outer_event_increment)
         * this.outer_event_increment;
       print('next_outer>> ' + next_outer);
       // Find the multiple of this.increment that is <= next_outer
@@ -300,6 +300,9 @@ function fixed_ceil(value) {
 
 
 function as_triangle(linear_time, increment) {
+  if (linear_time < 0) {
+    return [0, 0];
+  }
   if (increment === undefined) increment = 1;
   linear_time = linear_time / increment;
   const outer = fixed_ceil((Math.sqrt(linear_time * 8 + 1) - 1) / 2);
@@ -397,6 +400,7 @@ function schedule_save_settings() {
 
 const SETTINGS = Object.assign({
   'view_mode': 0,
+  'all_silenced': false,
 }, Storage.readJSON(SETTINGS_FILENAME, true) || {});
 
 var TIMERS = load_timers();
@@ -464,11 +468,15 @@ function delete_system_alarms() {
 }
 
 function set_system_alarms() {
+  if (SETTINGS.all_silenced) {
+    console.debug('silence all timers, not setting system alarms');
+    return;
+  }
   for (let idx = 0; idx < TIMERS.length; idx++) {
     let timer = TIMERS[idx];
     timer.check_auto_pause();
     let time_to_next_alarm = timer.time_to_next_alarm();
-    if (time_to_next_alarm !== null) {
+    if (time_to_next_alarm) {
       console.debug('set sched alarm ' + idx + ' (' + time_to_next_alarm/1000 + ')');
       Sched.setAlarm(idx.toString(), {
         appid: 'triangletimer',

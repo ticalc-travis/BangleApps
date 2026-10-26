@@ -13,22 +13,33 @@ function showAlarm(alarm) {
   tt.update_system_alarms();
   const message =  tt.format_triangle(tri_timer) + '\n' + alarm.msg;
 
-  E.showPrompt(message, {
-    title: 'Triangle timer',
-    buttons: { "Goto": true, "OK": false }
-  }).then(function (go) {
+  function doAlarmAction(action) {
     buzzCount = 0;
 
     Bangle.emit("alarmDismiss", alarm);
 
-    if (go) {
+    if (action === 'goto') {
       console.log('alarm ' + alarm.data.idx);
       tt.set_last_viewed_timer(tri_timer);
       load('triangletimer.app.js');
-    } else {
+    } else if (action === 'ok') {
+      if (isAutoPause) {
+        Bangle.showLoadingScreen();
+        tri_timer.start();
+        tt.update_system_alarms();
+      }
       load();
     }
-  });
+  }
+
+  const isAutoPause = tri_timer.outer_action === 'Pause';
+  const buttons = { Goto: 'goto', };
+  buttons[isAutoPause ? 'Next' : 'OK'] = 'ok';
+  E.showPrompt(message, {
+    title: 'Triangle timer',
+    buttons: buttons,
+    back: () => doAlarmAction('ok'),
+  }).then(doAlarmAction);
 
   function buzz() {
     if (settings.unlockAtBuzz) {
