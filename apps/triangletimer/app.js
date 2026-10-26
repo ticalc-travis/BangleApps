@@ -7,6 +7,55 @@ const tt = require('triangletimer');
 const MOVE_TO_TOP_TIMEOUT = 5000;
 const DRAG_THRESHOLD = 50;
 
+// Indicator arrow size in UI
+const ARROW_BTN_SIZE = 15;
+
+
+function draw_triangle(lay, flip) {
+  // Render right-pointing triangle if `flip`, else left-pointing
+  // triangle
+
+  flip = flip ? lay.w : 0;
+  g.setColor(g.theme.fg)
+    .fillPoly([flip + lay.x, lay.y + lay.h / 2,
+    lay.x + lay.w - flip, lay.y,
+    lay.x + lay.w - flip, lay.y + lay.h]);
+}
+
+function update_status_widget(timer) {
+  // Update the status widget with the current timer status. The
+  // timer is passed as a parameter.
+
+  function widget_draw() {
+    // Draw a right-pointing arrow if the timer is running
+
+    g.reset();
+    if (WIDGETS.triangletimer.width > 1) {
+      draw_triangle({
+        x: WIDGETS.triangletimer.x,
+        // Center the arrow vertically in the 24-pixel-height widget area
+        y: WIDGETS.triangletimer.y + Math.floor((24 - ARROW_BTN_SIZE) / 2),
+        w: ARROW_BTN_SIZE,
+        h: ARROW_BTN_SIZE
+      }, true);
+    }
+  }
+
+  // For some reason, a width of 0 when there's nothing to display
+  // doesn't work as expected, so we use 1 instead.
+  let width = timer.is_running() ? ARROW_BTN_SIZE : 1;
+
+  if (WIDGETS.triangletimer === undefined) {
+    WIDGETS.triangletimer = {
+      area: 'tr',
+      draw: widget_draw,
+    };
+  }
+  WIDGETS.triangletimer.width = width;
+  Bangle.drawWidgets();
+}
+
+
 class TimerView {
   constructor(tri_timer) {
     this.tri_timer = tri_timer;
@@ -219,6 +268,8 @@ class TimerView {
         + ' ' + this.tri_timer.display_name();
       this.layout.clear(this.layout.row3);
       this.layout.render(this.layout.row3);
+
+      update_status_widget(this.tri_timer);
     }
 
     if (this.tri_timer.is_running() && this.tri_timer.get() > 0) {
@@ -734,4 +785,5 @@ var CURRENT_UI = null;
 
 tt.update_system_alarms();
 
+update_status_widget(tt.TIMERS[0]);
 switch_UI(new TimerView(tt.TIMERS[0]));
