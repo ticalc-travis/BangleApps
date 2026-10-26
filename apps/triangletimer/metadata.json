@@ -4,6 +4,7 @@
   "shortName":"Triangle timer",
   "icon": "app.png",
   "version": "0.03",
+  "author": "ticalc-travis",
   "description": "Timers with incrementally increasing or decreasing periods",
   "tags": "timer",
   "supports": ["BANGLEJS2"],
